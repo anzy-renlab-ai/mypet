@@ -1,15 +1,19 @@
 import SwiftUI
 
 /// Cute compact desktop turtle (`tortoise.fill` SF Symbol). Hover for 1s to feed.
+///
+/// Feed is triggered by a `.task(id:)` that sleeps `petDuration` then fires —
+/// no `Timer` (which leaks/crashes when captured in a SwiftUI struct closure),
+/// no side effects inside the view builder.
 struct TurtleView: View {
     let state: PetState
     let excited: Bool
     let onFeed: (() -> Void)?
 
-    @State private var hovering = false
+    /// Changes to a fresh UUID each time the cursor enters; nil when it leaves.
+    /// Drives both the feed `.task` (via `id:`) and the progress ring (via start date).
+    @State private var hoverToken: UUID?
     @State private var hoverStart: Date?
-    @State private var hoverProgress: Double = 0
-    @State private var hoverTimer: Timer?
 
     private let petDuration: TimeInterval = 1.0
 
@@ -23,6 +27,7 @@ struct TurtleView: View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             let motion = bodyMotion(at: t)
+            let progress = hoverProgress(now: context.date)
 
             ZStack {
                 if state == .eating || state == .excited {
@@ -49,8 +54,8 @@ struct TurtleView: View {
                         .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
                         .offset(x: motion.sway, y: motion.bounce)
 
-                    if hovering && hoverProgress > 0 {
-                        ProgressDots(progress: hoverProgress).frame(height: 6)
+                    if progress > 0 {
+                        ProgressDots(progress: progress).frame(height: 6)
                     } else {
                         Spacer().frame(height: 6)
                     }
@@ -60,14 +65,38 @@ struct TurtleView: View {
         .contentShape(Circle())
         .frame(width: 80, height: 80)
         .onHover { isHovering in
-            hovering = isHovering
-            if isHovering { startPetTimer() } else { cancelPetTimer() }
+            if isHovering {
+                hoverStart = Date()
+                hoverToken = UUID()
+            } else {
+                hoverStart = nil
+                hoverToken = nil
+            }
+        }
+        .task(id: hoverToken) {
+            // No token → cursor not over turtle → nothing to do.
+            guard hoverToken != nil else { return }
+            // Wait the petting duration; if the cursor leaves, hoverToken
+            // changes and SwiftUI cancels this task.
+            try? await Task.sleep(nanoseconds: UInt64(petDuration * 1_000_000_000))
+            if !Task.isCancelled {
+                onFeed?()
+                // Reset so a continued hover doesn't immediately re-trigger;
+                // user must leave and re-enter for the next feed.
+                hoverStart = nil
+                hoverToken = nil
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("乌龟")
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("鼠标停留 1 秒触发喂 token")
         .animation(.easeInOut(duration: 0.2), value: state)
+    }
+
+    private func hoverProgress(now: Date) -> Double {
+        guard let start = hoverStart else { return 0 }
+        return min(1.0, now.timeIntervalSince(start) / petDuration)
     }
 
     private var petSymbol: String { "tortoise.fill" }
@@ -145,31 +174,6 @@ struct TurtleView: View {
         case .eating: return Color(red: 0.50, green: 0.80, blue: 0.35)
         default: return Color.white.opacity(0.5)
         }
-    }
-
-    private func startPetTimer() {
-        cancelPetTimer()
-        hoverStart = Date()
-        hoverProgress = 0
-        hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { _ in
-            guard let start = hoverStart else { return }
-            let elapsed = Date().timeIntervalSince(start)
-            hoverProgress = min(1.0, elapsed / petDuration)
-            if hoverProgress >= 1.0 {
-                hoverTimer?.invalidate()
-                hoverTimer = nil
-                hoverStart = nil
-                onFeed?()
-                hoverProgress = 0
-            }
-        }
-    }
-
-    private func cancelPetTimer() {
-        hoverTimer?.invalidate()
-        hoverTimer = nil
-        hoverStart = nil
-        withAnimation(.easeOut(duration: 0.2)) { hoverProgress = 0 }
     }
 }
 
