@@ -61,11 +61,18 @@ final class FeedCoordinator: ObservableObject {
 
     /// User clicked Feed. Orchestrates the full cycle.
     func feed() async {
-        // Cooldown gate
+        // Already feeding? ignore.
+        guard machine.state != .eating else { return }
+
+        // Cooldown gate — give the user feedback instead of silently doing nothing.
         if let last = try? await log.lastFeedTimestamp() {
             let sinceLast = Date().timeIntervalSince(last)
             if sinceLast < cooldownSeconds {
-                Self.log.info("feed rejected: cooldown active (\(Int(self.cooldownSeconds - sinceLast))s left)")
+                let remaining = Int((cooldownSeconds - sinceLast).rounded(.up))
+                Self.log.info("feed rejected: cooldown active (\(remaining)s left)")
+                tip = "还在消化呢，再等 \(remaining) 秒 🐢"
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                tip = nil
                 return
             }
         }
