@@ -23,43 +23,21 @@ struct TurtleView: View {
         self.onFeed = onFeed
     }
 
+    /// True when the turtle needs the 60fps render loop. When false (plain idle,
+    /// no cursor over it) we render a single static frame — zero CPU at rest.
+    /// This is the "不喂不烧 / zero CPU when idle" promise.
+    private var needsAnimation: Bool {
+        hoverToken != nil || state != .idle
+    }
+
     var body: some View {
-        TimelineView(.animation) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let motion = bodyMotion(at: t)
-            let progress = hoverProgress(now: context.date)
-
-            ZStack {
-                if state == .eating || state == .excited {
-                    ParticleField(at: t, state: state).allowsHitTesting(false)
+        Group {
+            if needsAnimation {
+                TimelineView(.animation) { context in
+                    content(at: context.date)
                 }
-
-                VStack(spacing: 2) {
-                    if let above = overlayAbove(at: t) {
-                        Text(above)
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .foregroundColor(overlayColor)
-                            .opacity(overlayOpacity(at: t))
-                    } else {
-                        Spacer().frame(height: 16)
-                    }
-
-                    Image(systemName: petSymbol)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 44, height: 44)
-                        .foregroundStyle(petGradient)
-                        .shadow(color: shadowColor.opacity(0.5), radius: 6, x: 0, y: 3)
-                        .scaleEffect(motion.scale, anchor: .bottom)
-                        .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
-                        .offset(x: motion.sway, y: motion.bounce)
-
-                    if progress > 0 {
-                        ProgressDots(progress: progress).frame(height: 6)
-                    } else {
-                        Spacer().frame(height: 6)
-                    }
-                }
+            } else {
+                content(at: Date())   // one static frame, no clock
             }
         }
         .contentShape(Circle())
@@ -73,16 +51,19 @@ struct TurtleView: View {
                 hoverToken = nil
             }
         }
+        // If the user click-drags the window, cancel the pending feed timer.
+        .gesture(
+            DragGesture(minimumDistance: 3)
+                .onChanged { _ in
+                    hoverStart = nil
+                    hoverToken = nil
+                }
+        )
         .task(id: hoverToken) {
-            // No token → cursor not over turtle → nothing to do.
             guard hoverToken != nil else { return }
-            // Wait the petting duration; if the cursor leaves, hoverToken
-            // changes and SwiftUI cancels this task.
             try? await Task.sleep(nanoseconds: UInt64(petDuration * 1_000_000_000))
             if !Task.isCancelled {
                 onFeed?()
-                // Reset so a continued hover doesn't immediately re-trigger;
-                // user must leave and re-enter for the next feed.
                 hoverStart = nil
                 hoverToken = nil
             }
@@ -90,8 +71,48 @@ struct TurtleView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("乌龟")
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("鼠标停留 1 秒触发喂 token")
+        .accessibilityHint("鼠标停留 1 秒喂它一口 token")
         .animation(.easeInOut(duration: 0.2), value: state)
+    }
+
+    @ViewBuilder
+    private func content(at date: Date) -> some View {
+        let t = date.timeIntervalSinceReferenceDate
+        let motion = bodyMotion(at: t)
+        let progress = hoverProgress(now: date)
+
+        ZStack {
+            if state == .eating || state == .excited {
+                ParticleField(at: t, state: state).allowsHitTesting(false)
+            }
+
+            VStack(spacing: 2) {
+                if let above = overlayAbove(at: t) {
+                    Text(above)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(overlayColor)
+                        .opacity(overlayOpacity(at: t))
+                } else {
+                    Spacer().frame(height: 16)
+                }
+
+                Image(systemName: petSymbol)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(petGradient)
+                    .shadow(color: shadowColor.opacity(0.5), radius: 6, x: 0, y: 3)
+                    .scaleEffect(motion.scale, anchor: .bottom)
+                    .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
+                    .offset(x: motion.sway, y: motion.bounce)
+
+                if progress > 0 {
+                    ProgressDots(progress: progress).frame(height: 6)
+                } else {
+                    Spacer().frame(height: 6)
+                }
+            }
+        }
     }
 
     private func hoverProgress(now: Date) -> Double {
