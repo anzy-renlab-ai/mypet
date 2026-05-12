@@ -64,7 +64,7 @@ final class MenubarController: NSObject {
         menu.addItem(loginToggle)
 
         let aboutItem = NSMenuItem(
-            title: "重新引导…",
+            title: "重新设置…",
             action: #selector(showOnboarding),
             keyEquivalent: ""
         )
