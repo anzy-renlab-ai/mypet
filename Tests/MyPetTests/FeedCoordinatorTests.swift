@@ -151,6 +151,31 @@ final class FeedCoordinatorTests: XCTestCase {
         XCTAssertEqual(feeder.callCount, firstCount, "Second feed within 60s must be rejected")
     }
 
+    // Regression: ISSUE-006 — cooldown used to swallow the feed silently.
+    // Found by /qa on 2026-05-12
+    // Report: ~/.gstack/projects/mypet/...-qa-...
+    func test_feed_duringCooldown_showsFeedbackTip() async {
+        let feeder = MockFeeder(result: .success("real tip"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.01
+        coord.tipDisplaySeconds = 0.01
+        coord.cooldownSeconds = 60
+
+        // First feed → records timestamp
+        await coord.feed()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        coord.dismissTip()
+
+        // Second feed within cooldown: launch it, sample the tip mid-flight.
+        let task = Task { await coord.feed() }
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNotNil(coord.tip, "Cooldown rejection must surface a tip, not be silent")
+        XCTAssertTrue(coord.tip!.contains("消化"), "Expected a 'still digesting' message, got: \(coord.tip ?? "nil")")
+        await task.value
+        // After the message window closes, tip clears.
+        XCTAssertNil(coord.tip)
+    }
+
     // MARK: - Idle transitions
 
     func test_evaluateIdle_setsHungry_after24h() async {
