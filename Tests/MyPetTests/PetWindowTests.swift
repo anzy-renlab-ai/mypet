@@ -58,16 +58,35 @@ final class PetWindowTests: XCTestCase {
         XCTAssertFalse(w.isReleasedWhenClosed)
     }
 
-    func test_init_isMovableByWindowBackgroundFalse() {
-        // v0.1 locks cat to bottom-right; v0.2 enables drag
+    func test_init_isCompactSizeAtRest() {
         let w = PetWindow()
-        XCTAssertFalse(w.isMovableByWindowBackground)
+        XCTAssertEqual(w.frame.size, PetWindow.compactSize)
+        XCTAssertEqual(PetWindow.compactSize, NSSize(width: 100, height: 100))
     }
 
-    func test_init_contentSize_is140x120pt() {
-        // Compact cat-sized window
+    func test_setExpanded_growsToFitTipBubble() {
         let w = PetWindow()
-        XCTAssertEqual(w.frame.size, NSSize(width: 140, height: 120))
+        w.placeBottomRight()
+        let beforeMaxX = w.frame.maxX
+        let beforeMinY = w.frame.minY
+        w.setExpanded(true, animate: false)
+        XCTAssertEqual(w.frame.size, PetWindow.expandedSize)
+        // Bottom-right corner stays put so the turtle doesn't jump.
+        XCTAssertEqual(w.frame.maxX, beforeMaxX, accuracy: 0.5)
+        XCTAssertEqual(w.frame.minY, beforeMinY, accuracy: 0.5)
+    }
+
+    func test_setExpanded_false_shrinksBack() {
+        let w = PetWindow()
+        w.setExpanded(true, animate: false)
+        w.setExpanded(false, animate: false)
+        XCTAssertEqual(w.frame.size, PetWindow.compactSize)
+    }
+
+    func test_isMovableByWindowBackground_isTrue() {
+        // Desktop pet should be draggable.
+        let w = PetWindow()
+        XCTAssertTrue(w.isMovableByWindowBackground)
     }
 
     func test_placeBottomRight_respects24ptMargin() {
@@ -77,7 +96,7 @@ final class PetWindowTests: XCTestCase {
             return XCTFail("No main screen for test")
         }
         let visible = screen.visibleFrame
-        let expectedX = visible.maxX - 140 - 24
+        let expectedX = visible.maxX - PetWindow.compactSize.width - 24
         let expectedY = visible.minY + 24
         XCTAssertEqual(w.frame.origin.x, expectedX, accuracy: 0.5)
         XCTAssertEqual(w.frame.origin.y, expectedY, accuracy: 0.5)

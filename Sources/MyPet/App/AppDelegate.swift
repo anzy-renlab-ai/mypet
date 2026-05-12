@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import OSLog
+import Combine
 
 let logger = Logger(subsystem: "ai.mypet", category: "App")
 
@@ -12,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menubar: MenubarController?
     private var coordinator: FeedCoordinator!
     private var feedLog: FeedLog!
+    private var tipCancellable: AnyCancellable?
 
     private var hasShownOnboarding: Bool {
         get { UserDefaults.standard.bool(forKey: "mypet.onboarding.shown") }
@@ -67,6 +69,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.placeBottomRight()
         window.makeKeyAndOrderFront(nil)
         petWindow = window
+
+        // Grow the window to fit a tip bubble while one is showing, shrink back
+        // when it clears. Without this the bubble is wider than the window and
+        // the tip text gets clipped.
+        tipCancellable = coordinator.$tip.sink { [weak self] tip in
+            guard let self, let w = self.petWindow else { return }
+            w.setExpanded(tip != nil, animate: true)
+            w.placeBottomRight()
+        }
     }
 
     private func petRoot() -> some View {
@@ -111,35 +122,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// Tap the cat to feed. No separate button.
+/// Hover the turtle 1s to feed. Fills the window, which resizes between
+/// compact and expanded as a tip bubble shows/hides (handled in AppDelegate).
 @MainActor
 struct PetRootView: View {
     @ObservedObject var coordinator: FeedCoordinator
 
     var body: some View {
-        ZStack {
-            // Tip bubble above cat
+        VStack(spacing: 4) {
             if let tip = coordinator.tip {
-                VStack {
-                    TipBubble(text: tip) {
-                        coordinator.dismissTip()
-                    }
-                    .padding(.top, 20)
-                    Spacer()
+                TipBubble(text: tip) {
+                    coordinator.dismissTip()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .zIndex(2)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-
-            // Turtle — hover 1s to feed
-            TurtleView(
-                state: coordinator.state,
-                excited: coordinator.excited,
-                onFeed: { Task { await coordinator.feed() } }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .zIndex(1)
+            Spacer(minLength: 0)
+            HStack {
+                Spacer(minLength: 0)
+                TurtleView(
+                    state: coordinator.state,
+                    excited: coordinator.excited,
+                    onFeed: { Task { await coordinator.feed() } }
+                )
+            }
         }
-        .frame(width: 140, height: 120)
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: coordinator.tip)
     }
 }
