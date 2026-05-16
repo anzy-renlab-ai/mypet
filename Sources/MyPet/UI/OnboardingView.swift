@@ -115,7 +115,7 @@ struct OnboardingView: View {
                 .controlSize(.large)
                 .tint(accentPink)
                 .scaleEffect(1.2)
-            Text("正在闻闻 Claude Code…")
+            Text("小猫在嗅嗅 Claude Code…")
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundColor(textPrimary)
             Text("检查 CLI 是否在你的电脑上")
@@ -126,7 +126,7 @@ struct OnboardingView: View {
 
     private func foundCard(path: String) -> some View {
         VStack(spacing: 14) {
-            TurtleBadge()
+            CatBadge()
             Text("找到啦")
                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
                 .foregroundColor(textPrimary)
@@ -153,7 +153,7 @@ struct OnboardingView: View {
 
     private var notFoundCard: some View {
         VStack(spacing: 14) {
-            TurtleBadge()
+            CatBadge()
             Text("找不到 Claude Code")
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundColor(textPrimary)
@@ -177,7 +177,7 @@ struct OnboardingView: View {
 
     private var loginCard: some View {
         VStack(spacing: 14) {
-            TurtleBadge()
+            CatBadge()
             Text("要不要开机自启？")
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundColor(textPrimary)
@@ -215,11 +215,11 @@ struct OnboardingView: View {
 
     private var doneCard: some View {
         VStack(spacing: 12) {
-            TurtleBadge()
+            CatBadge()
             Text("搞定")
                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
                 .foregroundColor(textPrimary)
-            Text("乌龟住在右下角了。\n鼠标移到它身上停一秒就喂它一口，\n或者菜单栏 🐢 → Feed now。")
+            Text("小猫住在右下角了。\n鼠标移到它身上停一秒就喂它一口，\n或者菜单栏 🐾 → Feed now。")
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(textSecondary)
                 .multilineTextAlignment(.center)
@@ -233,23 +233,19 @@ struct OnboardingView: View {
     private var accentPink: Color { Color(red: 0.95, green: 0.52, blue: 0.62) }
 }
 
-// MARK: - Turtle badge for onboarding
+// MARK: - Cat badge for onboarding
 
-private struct TurtleBadge: View {
+private struct CatBadge: View {
+    /// Drives idle blink/breathe without owning a clock.
     var body: some View {
-        Image(systemName: "tortoise.fill")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 60, height: 60)
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [Color(red: 0.55, green: 0.78, blue: 0.55),
-                             Color(red: 0.38, green: 0.62, blue: 0.40)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .shadow(color: Color(red: 0.40, green: 0.60, blue: 0.35).opacity(0.4), radius: 8, x: 0, y: 4)
+        TimelineView(.animation) { ctx in
+            let t = ctx.date.timeIntervalSinceReferenceDate
+            CuteCatFace(state: .idle, t: t)
+                .frame(width: 76, height: 76)
+                .scaleEffect(1.0 + sin(t * 1.6) * 0.025)
+                .shadow(color: Color(red: 0.98, green: 0.55, blue: 0.40).opacity(0.35),
+                        radius: 10, x: 0, y: 5)
+        }
     }
 }
 

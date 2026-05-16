@@ -75,7 +75,7 @@ final class FeedCoordinatorTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
 
         XCTAssertEqual(coord.state, .purring)
-        XCTAssertEqual(coord.tip, "你好啊，我是 mypet 的小乌龟，谢谢你接我回家 🐢")
+        XCTAssertEqual(coord.tip, "喵～我是 mypet 的小猫，谢谢你接我回家 🐾")
         XCTAssertFalse(coord.isFirstFeed, "isFirstFeed must clear after first success")
 
         coord.dismissTip()

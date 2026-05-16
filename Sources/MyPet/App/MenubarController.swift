@@ -29,11 +29,11 @@ final class MenubarController: NSObject {
     private func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            if let img = NSImage(systemSymbolName: "tortoise.fill", accessibilityDescription: "mypet") {
+            if let img = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "mypet") {
                 img.isTemplate = true
                 button.image = img
             } else {
-                button.title = "🐢"
+                button.title = "🐾"
             }
             button.toolTip = "mypet"
         }

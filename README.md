@@ -1,45 +1,73 @@
-# mypet 🐢
+# mypet 🐱
 
-A token-eating desktop turtle for Claude Code users.
+> A fluffy desktop cat that eats your Claude Code tokens.
+>
+> Hover for one second. The cat chomps one `claude -p` call and bubbles back
+> a Claude Code tip or tech-news headline. Then goes back to sleep.
+>
+> macOS 13+ · SwiftUI · zero deps · MIT
 
-The turtle floats in the bottom-right of your screen, fast asleep by default —
-zero CPU, zero network, zero API spend. Hover over it for one second to feed it
-a token: it wakes up, chomps through one `claude -p` call, and a speech bubble
-pops with one Claude Code tip or a piece of tech news. Then it goes back to sleep.
+<p align="center">
+  <img src="docs/screenshots/hero.png" width="420" alt="fluffy orange tabby mypet, idle, in the bottom-right of the screen">
+</p>
 
-> macOS 13+ • SwiftUI + AppKit • MIT
+## Why
 
-## How feeding works
+You pay for Claude Code anyway. The little cat spends *your* subscription
+quota — no separate Anthropic API key, no server, no telemetry. When you're
+not feeding it, it costs **zero CPU** and **zero network**. When you do feed
+it, you get one cute interruption and one tiny morsel of useful information.
 
-1. Hover your mouse over the turtle for ~1 second (a ring of dots fills up).
-2. The turtle plays a chomp animation.
-3. `mypet` runs `claude -p "<prompt>" --output-format text` — it spends *your*
-   Claude Code subscription quota, no separate Anthropic API key required.
-4. The reply appears in a speech bubble above the turtle.
-5. The turtle purrs, then drifts back to idle.
+It's a screensaver that pays rent.
 
-Cooldown: one feed per minute. No feeds for 24h → the turtle gets hungry
-(visual only, still zero background work).
+## How it works
+
+```
+ hover 1s   ─►  chomp animation  ─►  claude -p "<prompt>"  ─►  💬 tip bubble
+                                                                    │
+   ◄─ purr ──────────── 8s ──────── click to dismiss / auto-fade ◄──┘
+```
+
+1. Mouse over the cat for ~1 second (a small dot ring fills up).
+2. Cat plays a chomp animation, ears twitch, sparkles fly.
+3. `mypet` shells out to your local `claude` CLI — same login, same quota.
+4. The reply appears in a tiny speech bubble above the cat.
+5. Cat purrs, then drifts back to idle.
+
+Cooldown: one feed per minute (the cat tells you when it's still digesting).
+No interaction for 24h → the cat gets hungry (a sad face + a tear). All
+visual — still zero background work.
 
 ## States
 
-`idle` (gentle sway) · `eating` (chomp + ⚡ particles) · `excited` (jump + ✦ sparkles) ·
-`purring` (slow breathe) · `sleepy` (head tilt + zZz) · `hungry` (sad sway)
+| State | When | Looks like |
+|---|---|---|
+| `idle` | resting | gentle sway, slow blink |
+| `eating` | feeding now | happy `^ ^` eyes, mouth open, sparkles |
+| `excited` | feed succeeded | jump, stars overhead |
+| `purring` | tip showing | heart eyes, ♡ overhead |
+| `sleepy` | 2h idle | closed eyes, head tilt, `zZz` |
+| `hungry` | 24h no feed / error | frown, single tear, ear droop |
 
 ## Requirements
 
 - macOS 13 or later
-- Claude Code CLI on your PATH (`claude --version` works)
+- [Claude Code CLI](https://docs.anthropic.com/claude-code) on your `PATH`
+  (`claude --version` works)
 
-## Build
+## Install + run
 
 ```bash
-swift build
+git clone https://github.com/<you>/mypet
+cd mypet
 swift run mypet
 ```
 
-First launch shows a short onboarding wizard (detects `claude`, asks about
-launch-at-login, does a demo feed).
+First launch shows a tiny onboarding wizard (detects `claude`, asks about
+launch-at-login, then plays a demo feed).
+
+The cat lives in the bottom-right of your primary display. Click-drag it
+anywhere. The 🐾 menu-bar icon gives you `Feed now`, `开机自启`, and quit.
 
 ## Tests
 
@@ -47,27 +75,28 @@ launch-at-login, does a demo feed).
 swift test
 ```
 
-78 tests covering the `claude` subprocess wrapper (binary discovery, timeout,
+81 tests cover the `claude` subprocess wrapper (binary discovery, timeout,
 cancellation, output normalization, error classification, concurrency guard,
 FD-leak check), the feed log (corruption recovery, cooldown, hungry detection),
 the pet state machine, the feed coordinator, and the window configuration.
 
-## Project layout
+## Layout
 
 ```
 Sources/MyPet/
   App/        MyPetApp, AppDelegate, MenubarController
-  Window/     PetWindow (borderless transparent, click-through)
-  Scene/      TurtleView (SF Symbol turtle, hover-to-feed, multi-state motion)
+  Window/     PetWindow (borderless, transparent, status-bar level, draggable)
+  Scene/      TurtleView + CuteCatFace (all-vector cat, no SF Symbol)
   UI/         OnboardingView, TipBubble, FeedButton
   Domain/     ClaudeSubprocess, FeedCoordinator, PetState, LoginItem
   Storage/    FeedLog (JSON in Application Support)
-scripts/      gen-sprite.ts, gen-all-sprites.ts (optional AI sprite pipeline)
 ```
 
-## Why a turtle?
+See [CLAUDE.md](CLAUDE.md) for the architecture cheat-sheet and invariants
+that exist to keep mypet stable + cheap (zero-CPU-when-idle, hover-via-Task,
+single-in-flight feed, etc.).
 
-The original plan was a cat, but the `cat.fill` SF Symbol only exists on
-macOS 14+. `tortoise.fill` is available on macOS 13, equally cute, and the
-chubby little shell renders crisply at any size. (If you're on macOS 14+ and
-want a cat, it's a one-line change in `TurtleView.swift`.)
+## License
+
+MIT. Built for Claude Code users who wanted something cute on their desktop.
+PRs welcome — especially new tip prompts and seasonal cat skins.

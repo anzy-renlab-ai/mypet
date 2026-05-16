@@ -70,7 +70,7 @@ final class FeedCoordinator: ObservableObject {
             if sinceLast < cooldownSeconds {
                 let remaining = Int((cooldownSeconds - sinceLast).rounded(.up))
                 Self.log.info("feed rejected: cooldown active (\(remaining)s left)")
-                tip = "还在消化呢，再等 \(remaining) 秒 🐢"
+                tip = "还在消化呢，再等 \(remaining) 秒 🐾"
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 tip = nil
                 return
@@ -140,7 +140,7 @@ final class FeedCoordinator: ObservableObject {
         state = machine.state
         excited = false
         tip = isFirstFeed
-            ? "你好啊，我是 mypet 的小乌龟，谢谢你接我回家 🐢"
+            ? "喵～我是 mypet 的小猫，谢谢你接我回家 🐾"
             : receivedTip
         isFirstFeed = false
 
@@ -180,21 +180,21 @@ final class FeedCoordinator: ObservableObject {
     private func friendlyMessage(for error: ClaudeSubprocessError) -> String {
         switch error {
         case .binaryNotFound:
-            return "乌龟找不到 Claude Code，去 docs.anthropic.com/claude-code 装一下吧 🐢"
+            return "小猫找不到 Claude Code，去 docs.anthropic.com/claude-code 装一下吧 🐾"
         case .notAuthenticated:
-            return "你的 Claude 没登录！跑 `claude login` 再喂乌龟 🐾"
+            return "你的 Claude 没登录！跑 `claude login` 再喂猫 🐾"
         case .rateLimited:
-            return "度转中... 一会儿再来 🌀"
+            return "限速中... 一会儿再来 🌀"
         case .timeout:
             return "Claude 想了太久，下次试试 🕐"
         case .cancelled:
-            return "乌龟被打断了 🐾"
+            return "小猫被打断了 🐾"
         case .emptyOutput:
             return "Claude 给了个空响应，再喂一次？🤔"
         case .systemError, .nonZeroExit:
             return "出了点问题，过会再试 🐾"
         case .busy:
-            return "乌龟正在吃，等等再喂 🐢"
+            return "小猫正在吃，等等再喂 🐾"
         }
     }
 }
