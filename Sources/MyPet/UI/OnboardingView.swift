@@ -223,6 +223,22 @@ struct OnboardingView: View {
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(textSecondary)
                 .multilineTextAlignment(.center)
+            // Tiny low-pressure star nudge — devs who love it can star us back.
+            Button {
+                if let url = URL(string: "https://github.com/anzy-renlab-ai/mypet") {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text("⭐").font(.system(size: 12))
+                    Text("喜欢的话去仓库点个 star")
+                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .underline()
+                }
+                .foregroundColor(accentPink)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
     }
 
