@@ -8,6 +8,9 @@ struct TipBubble: View {
     /// Optional category badge ("tip" / "prompt" / "news" / "TIL" / "joke" / "打油诗")
     /// Rendered as a tiny chip in the top-left corner of the bubble.
     var themeBadge: ThemeBadge? = nil
+    /// Tokens the cat just ate (input + output). Rendered as a small chip
+    /// in the top-right; nil to omit (welcome / cooldown / error tips).
+    var tokens: Int? = nil
     let onDismiss: () -> Void
 
     @State private var appear = false
@@ -41,6 +44,22 @@ struct TipBubble: View {
                             Capsule().fill(badge.tint.opacity(0.15))
                         )
                         .offset(x: -4, y: -7)
+                    }
+                }
+                .overlay(alignment: .topTrailing) {
+                    if let n = tokens, n > 0 {
+                        HStack(spacing: 2) {
+                            Text("🐟").font(.system(size: 10))
+                            Text("\(n)t")
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundColor(Color(red: 0.45, green: 0.30, blue: 0.20))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(Color(red: 1.00, green: 0.78, blue: 0.30).opacity(0.20))
+                        )
+                        .offset(x: 4, y: -7)
                     }
                 }
 

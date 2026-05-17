@@ -132,7 +132,9 @@ struct PetRootView: View {
     var body: some View {
         VStack(spacing: 4) {
             if let tip = coordinator.tip {
-                TipBubble(text: tip, themeBadge: themeBadge(for: coordinator)) {
+                TipBubble(text: tip,
+                          themeBadge: themeBadge(for: coordinator),
+                          tokens: tokensChip(for: coordinator)) {
                     coordinator.dismissTip()
                 }
                 .padding(.top, 8)
@@ -152,6 +154,13 @@ struct PetRootView: View {
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: coordinator.tip)
+    }
+
+    /// Tokens chip mirrors the badge gating: only show when a real LLM tip
+    /// is on screen (skip welcome / cooldown / errors).
+    private func tokensChip(for coord: FeedCoordinator) -> Int? {
+        guard themeBadge(for: coord) != nil else { return nil }
+        return coord.lastTokens > 0 ? coord.lastTokens : nil
     }
 
     /// Hide the badge for first-feed welcome / cooldown / error tips —

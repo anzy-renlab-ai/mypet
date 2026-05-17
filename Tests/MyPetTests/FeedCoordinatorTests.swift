@@ -6,15 +6,23 @@ final class FeedCoordinatorTests: XCTestCase {
 
     /// Test double: configurable Feeder that returns canned results.
     final class MockFeeder: Feeder {
-        var result: Result<String, ClaudeSubprocessError>
+        var result: Result<FeedSuccess, ClaudeSubprocessError>
         var callCount = 0
         var lastPrompt: String?
 
-        init(result: Result<String, ClaudeSubprocessError>) {
+        init(result: Result<FeedSuccess, ClaudeSubprocessError>) {
             self.result = result
         }
 
-        func feed(prompt: String) async -> Result<String, ClaudeSubprocessError> {
+        /// Backwards-compat init: tests that don't care about tokens can pass a String.
+        convenience init(tipResult: Result<String, ClaudeSubprocessError>) {
+            switch tipResult {
+            case .success(let s): self.init(result: .success(FeedSuccess(tip: s, tokens: 0)))
+            case .failure(let e): self.init(result: .failure(e))
+            }
+        }
+
+        func feed(prompt: String) async -> Result<FeedSuccess, ClaudeSubprocessError> {
             callCount += 1
             lastPrompt = prompt
             return result
@@ -39,7 +47,7 @@ final class FeedCoordinatorTests: XCTestCase {
     // MARK: - Happy path
 
     func test_feed_happyPath_transitions_idle_eating_excited_purring_idle() async {
-        let feeder = MockFeeder(result: .success("a fun tip 🐾"))
+        let feeder = MockFeeder(tipResult: .success("a fun tip 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
         coord.tipDisplaySeconds = 0.05
@@ -63,7 +71,7 @@ final class FeedCoordinatorTests: XCTestCase {
     }
 
     func test_feed_firstFeed_showsWelcomeTipNotRawTip() async {
-        let feeder = MockFeeder(result: .success("a fun tip 🐾"))
+        let feeder = MockFeeder(tipResult: .success("a fun tip 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
         coord.tipDisplaySeconds = 5  // longer so we can sample
@@ -83,7 +91,7 @@ final class FeedCoordinatorTests: XCTestCase {
     }
 
     func test_feed_secondFeed_showsRawTip() async {
-        let feeder = MockFeeder(result: .success("real tip text 🐾"))
+        let feeder = MockFeeder(tipResult: .success("real tip text 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
         coord.tipDisplaySeconds = 5
@@ -104,7 +112,7 @@ final class FeedCoordinatorTests: XCTestCase {
     // MARK: - Error path
 
     func test_feed_error_setsHungryAndFriendlyMessage() async {
-        let feeder = MockFeeder(result: .failure(.notAuthenticated))
+        let feeder = MockFeeder(tipResult: .failure(.notAuthenticated))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.tipDisplaySeconds = 5
 
@@ -120,7 +128,7 @@ final class FeedCoordinatorTests: XCTestCase {
     }
 
     func test_feed_binaryNotFound_givesInstallGuidance() async {
-        let feeder = MockFeeder(result: .failure(.binaryNotFound))
+        let feeder = MockFeeder(tipResult: .failure(.binaryNotFound))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.tipDisplaySeconds = 5
 
@@ -136,7 +144,7 @@ final class FeedCoordinatorTests: XCTestCase {
     // MARK: - Cooldown
 
     func test_feed_blockedByCooldown() async {
-        let feeder = MockFeeder(result: .success("tip"))
+        let feeder = MockFeeder(tipResult: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.01
         coord.tipDisplaySeconds = 0.01
@@ -155,7 +163,7 @@ final class FeedCoordinatorTests: XCTestCase {
     // Found by /qa on 2026-05-12
     // Report: ~/.gstack/projects/mypet/...-qa-...
     func test_feed_duringCooldown_showsFeedbackTip() async {
-        let feeder = MockFeeder(result: .success("real tip"))
+        let feeder = MockFeeder(tipResult: .success("real tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.01
         coord.tipDisplaySeconds = 0.01
@@ -179,7 +187,7 @@ final class FeedCoordinatorTests: XCTestCase {
     // MARK: - Idle transitions
 
     func test_evaluateIdle_setsHungry_after24h() async {
-        let feeder = MockFeeder(result: .success("tip"))
+        let feeder = MockFeeder(tipResult: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.cooldownSeconds = 0
         coord.excitedOverlaySeconds = 0.01
@@ -230,8 +238,33 @@ final class FeedCoordinatorTests: XCTestCase {
         }
     }
 
+    // MARK: - Token reporting
+
+    func test_feed_recordsTokens_andAccumulatesTotal() async {
+        let feeder = MockFeeder(result: .success(FeedSuccess(tip: "tip", tokens: 142)))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.cooldownSeconds = 0
+        coord.excitedOverlaySeconds = 0.01
+        coord.tipDisplaySeconds = 0.01
+
+        XCTAssertEqual(coord.lastTokens, 0)
+        XCTAssertEqual(coord.totalTokens, 0)
+
+        await coord.feed()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(coord.lastTokens, 142)
+        XCTAssertEqual(coord.totalTokens, 142)
+
+        await coord.feed()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(coord.lastTokens, 142)
+        XCTAssertEqual(coord.totalTokens, 284, "Total must accumulate across feeds")
+    }
+
     func test_feed_recordsLastTheme_andSendsThatPromptToFeeder() async {
-        let feeder = MockFeeder(result: .success("tip"))
+        let feeder = MockFeeder(tipResult: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.01
         coord.tipDisplaySeconds = 0.01
@@ -246,7 +279,7 @@ final class FeedCoordinatorTests: XCTestCase {
     }
 
     func test_wake_fromSleepy_returnsIdle() async {
-        let feeder = MockFeeder(result: .success("tip"))
+        let feeder = MockFeeder(tipResult: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         // Manually drive into sleepy via the state machine — only public way is
         // evaluateIdle with timestamps in past, which we can't easily mock.

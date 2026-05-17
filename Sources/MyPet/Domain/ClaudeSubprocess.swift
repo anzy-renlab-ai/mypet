@@ -15,6 +15,16 @@ enum ClaudeSubprocessError: Error, Equatable {
     case busy
 }
 
+/// Single feed result — tip text + the tokens it cost.
+/// Tokens = input + output (cache tokens excluded so the count tracks "fresh"
+/// consumption a user would intuit).
+struct FeedSuccess: Equatable {
+    let tip: String
+    let tokens: Int
+
+    static let zero = FeedSuccess(tip: "", tokens: 0)
+}
+
 /// Coordinates calls to the local `claude` CLI for the "feed" action.
 ///
 /// - Static helpers (`discoverBinary`, `runRaw`, `normalizeTip`, `classifyStderr`)
@@ -231,15 +241,15 @@ final class ClaudeSubprocess {
 
     // MARK: - Feed (concurrent-guarded)
 
-    func feed(prompt: String) async -> Result<String, ClaudeSubprocessError> {
+    func feed(prompt: String) async -> Result<FeedSuccess, ClaudeSubprocessError> {
         // Try to acquire the lock without waiting; if held, report .busy
         let acquired = await runLock.tryAcquire()
         guard acquired else { return .failure(.busy) }
         defer { Task { await runLock.release() } }
 
         do {
-            let tip = try await Self.feedOnce(prompt: prompt)
-            return .success(tip)
+            let result = try await Self.feedOnce(prompt: prompt)
+            return .success(result)
         } catch let err as ClaudeSubprocessError {
             return .failure(err)
         } catch {
@@ -247,20 +257,50 @@ final class ClaudeSubprocess {
         }
     }
 
-    static func feedOnce(prompt: String) async throws -> String {
+    /// Calls `claude -p <prompt> --output-format json` and parses the result
+    /// envelope so we can report token usage alongside the tip text.
+    static func feedOnce(prompt: String) async throws -> FeedSuccess {
         guard let binary = await discoverBinary() else {
             throw ClaudeSubprocessError.binaryNotFound
         }
         let raw = try await runRaw(
             binary: binary,
-            args: ["-p", prompt, "--output-format", "text"],
+            args: ["-p", prompt, "--output-format", "json"],
             timeout: 20
         )
-        let tip = normalizeTip(raw)
-        if tip.isEmpty {
+        let parsed = try parseFeedJSON(raw)
+        if parsed.tip.isEmpty {
             throw ClaudeSubprocessError.emptyOutput
         }
-        return tip
+        return parsed
+    }
+
+    /// Parses the JSON envelope `claude --output-format json` returns into
+    /// `(tip, tokens)`. Token count = input + output (cache excluded).
+    /// Falls back to treating the raw string as plain text if JSON parse fails.
+    static func parseFeedJSON(_ raw: String) throws -> FeedSuccess {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let data = trimmed.data(using: .utf8) else {
+            throw ClaudeSubprocessError.emptyOutput
+        }
+        // Decoder: tolerate missing fields, ignore everything except what we need.
+        struct Usage: Decodable {
+            let input_tokens: Int?
+            let output_tokens: Int?
+        }
+        struct Envelope: Decodable {
+            let result: String?
+            let is_error: Bool?
+            let usage: Usage?
+        }
+        if let env = try? JSONDecoder().decode(Envelope.self, from: data) {
+            if env.is_error == true { throw ClaudeSubprocessError.systemError }
+            let tip = normalizeTip(env.result ?? "")
+            let tokens = (env.usage?.input_tokens ?? 0) + (env.usage?.output_tokens ?? 0)
+            return FeedSuccess(tip: tip, tokens: tokens)
+        }
+        // Fallback: treat raw as text (defensive — earlier CLI versions used text).
+        return FeedSuccess(tip: normalizeTip(trimmed), tokens: 0)
     }
 
     static func smokeTest() async {

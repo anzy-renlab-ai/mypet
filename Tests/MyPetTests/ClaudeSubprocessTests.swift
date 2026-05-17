@@ -288,6 +288,39 @@ final class ClaudeSubprocessTests: XCTestCase {
         }
     }
 
+    // MARK: - 10. JSON envelope parser (token capture)
+
+    func test_parseFeedJSON_extractsTipAndTokens_fromRealEnvelope() throws {
+        let raw = #"""
+        {"type":"result","subtype":"success","is_error":false,"result":"hello world ✨",
+         "usage":{"input_tokens":13,"output_tokens":265,"cache_read_input_tokens":86450}}
+        """#
+        let parsed = try ClaudeSubprocess.parseFeedJSON(raw)
+        XCTAssertEqual(parsed.tip, "hello world ✨")
+        XCTAssertEqual(parsed.tokens, 13 + 265, "Cache tokens must be excluded")
+    }
+
+    func test_parseFeedJSON_falback_treatsPlainTextAsTip() throws {
+        let raw = "plain text reply 🐱"
+        let parsed = try ClaudeSubprocess.parseFeedJSON(raw)
+        XCTAssertEqual(parsed.tip, "plain text reply 🐱")
+        XCTAssertEqual(parsed.tokens, 0)
+    }
+
+    func test_parseFeedJSON_isErrorTrue_throws() {
+        let raw = #"{"type":"result","is_error":true,"result":"oops"}"#
+        XCTAssertThrowsError(try ClaudeSubprocess.parseFeedJSON(raw)) { err in
+            XCTAssertEqual(err as? ClaudeSubprocessError, .systemError)
+        }
+    }
+
+    func test_parseFeedJSON_missingUsage_returnsZeroTokens() throws {
+        let raw = #"{"type":"result","is_error":false,"result":"tip"}"#
+        let parsed = try ClaudeSubprocess.parseFeedJSON(raw)
+        XCTAssertEqual(parsed.tip, "tip")
+        XCTAssertEqual(parsed.tokens, 0)
+    }
+
     // MARK: - Helpers
 
     private func countOpenFDs() -> Int {

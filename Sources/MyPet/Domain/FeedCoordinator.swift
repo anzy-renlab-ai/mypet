@@ -6,7 +6,7 @@ private let log = Logger(subsystem: "ai.mypet", category: "FeedCoordinator")
 
 /// Abstraction over `ClaudeSubprocess.shared.feed` for testability.
 protocol Feeder {
-    func feed(prompt: String) async -> Result<String, ClaudeSubprocessError>
+    func feed(prompt: String) async -> Result<FeedSuccess, ClaudeSubprocessError>
 }
 
 extension ClaudeSubprocess: Feeder {}
@@ -30,6 +30,10 @@ final class FeedCoordinator: ObservableObject {
     @Published private(set) var lastError: ClaudeSubprocessError?
     @Published private(set) var isFirstFeed: Bool = true
     @Published private(set) var feedCount: Int = 0
+    /// Tokens consumed by the most recent successful feed (input + output).
+    @Published private(set) var lastTokens: Int = 0
+    /// Running total tokens this session.
+    @Published private(set) var totalTokens: Int = 0
 
     // MARK: - Configuration
 
@@ -186,8 +190,8 @@ final class FeedCoordinator: ObservableObject {
         let result = await feeder.feed(prompt: theme.prompt)
 
         switch result {
-        case .success(let receivedTip):
-            await handleSuccess(tip: receivedTip)
+        case .success(let success):
+            await handleSuccess(success)
         case .failure(let error):
             await handleFailure(error: error)
         }
@@ -216,14 +220,17 @@ final class FeedCoordinator: ObservableObject {
 
     // MARK: - Private
 
-    private func handleSuccess(tip receivedTip: String) async {
+    private func handleSuccess(_ success: FeedSuccess) async {
+        let receivedTip = success.tip
         machine.feedSucceeded()
         state = .excited
         excited = true
+        lastTokens = success.tokens
+        totalTokens += success.tokens
 
-        // Record to log
+        // Record to log (tokens captured in the entry too)
         do {
-            try await log.append(.init(ts: Date(), tip: receivedTip, exitCode: 0))
+            try await log.append(.init(ts: Date(), tip: receivedTip, exitCode: 0, tokens: success.tokens))
         } catch {
             Self.log.error("log append failed: \(error.localizedDescription)")
         }

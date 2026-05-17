@@ -14,6 +14,26 @@ actor FeedLog {
         let ts: Date
         let tip: String
         let exitCode: Int32
+        /// Tokens consumed by this feed (input + output). 0 for failures or
+        /// older entries written before token capture was wired.
+        let tokens: Int
+
+        init(ts: Date, tip: String, exitCode: Int32, tokens: Int = 0) {
+            self.ts = ts
+            self.tip = tip
+            self.exitCode = exitCode
+            self.tokens = tokens
+        }
+
+        // Decoder accepts entries missing the tokens field (old log files).
+        enum CodingKeys: String, CodingKey { case ts, tip, exitCode, tokens }
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            ts = try c.decode(Date.self, forKey: .ts)
+            tip = try c.decode(String.self, forKey: .tip)
+            exitCode = try c.decode(Int32.self, forKey: .exitCode)
+            tokens = (try? c.decode(Int.self, forKey: .tokens)) ?? 0
+        }
     }
 
     private let url: URL
