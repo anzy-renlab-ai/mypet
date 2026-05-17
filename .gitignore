@@ -6,3 +6,5 @@ xcuserdata/
 .vscode/
 *.dmg
 .gstack/
+.agents/
+skills-lock.json
