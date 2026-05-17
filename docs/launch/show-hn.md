@@ -20,7 +20,7 @@ of work hours. So I built a fluffy desktop cat for macOS that you hover over
 for ~1 second; it chomps one `claude -p` call and a speech bubble pops with
 one of six things, weighted: a Claude Code tip, a prompt to type into Claude
 Code right now, a one-line tech-news headline, a "today I learned", a
-programmer joke, or a programmer haiku.
+programmer joke, or a Chinese 打油诗 (punny quatrain).
 
 No background work — zero CPU and zero network when you're not hovering. No
 separate Anthropic API key — it spends your existing Claude Code quota by

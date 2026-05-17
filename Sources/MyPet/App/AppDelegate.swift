@@ -166,7 +166,7 @@ struct PetRootView: View {
         case .techNews:   return .techNews
         case .til:        return .til
         case .devJoke:    return .devJoke
-        case .haiku:      return .haiku
+        case .dayouShi:   return .dayouShi
         }
     }
 }

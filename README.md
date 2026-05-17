@@ -3,7 +3,7 @@
 > A fluffy desktop cat that eats your Claude Code tokens.
 >
 > Hover for one second. The cat chomps one `claude -p` call and bubbles back
-> a Claude Code tip, a prompt to try, a haiku, or a tech-news headline.
+> a Claude Code tip, a prompt to try, a 打油诗 (Chinese quatrain), or a tech-news headline.
 > Then goes back to sleep.
 
 [![CI](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml/badge.svg)](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml)
@@ -66,7 +66,7 @@ so you don't get the same vibe twice in a row:
 | 📰 | `techNews` | 18% | One-line tech-news headline |
 | 🤓 | `til` | 14% | "Today I learned" fact a senior eng would still find surprising |
 | 😆 | `devJoke` | 10% | Programmer one-liner |
-| 🍂 | `haiku` | 8% | Programmer haiku (5/7/5) |
+| 🥟 | `dayouShi` | 8% | 程序员打油诗 (Chinese punny quatrain) |
 
 Click the bubble to copy the tip to your clipboard. The menubar 🐾 dropdown
 keeps the last 10 tips under **Recent tips** — click any to copy.

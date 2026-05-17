@@ -210,12 +210,12 @@ final class FeedCoordinatorTests: XCTestCase {
     }
 
     func test_nextTheme_lowR_picksClaudeTip_highR_picksHaiku() {
-        // Cumulative cutpoints (claudeTip .. haiku) match the published
+        // Cumulative cutpoints (claudeTip .. dayouShi) match the published
         // weights — guards against accidental re-ordering of the switch.
         XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.0 }), .claudeTip)
         XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.29 }), .claudeTip)
         XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.30 }), .promptIdea)
-        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.95 }), .haiku)
+        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.95 }), .dayouShi)
     }
 
     func test_prompt_localeAware_zhVsEn_areDifferent() {

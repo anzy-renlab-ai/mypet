@@ -8,7 +8,7 @@ your Claude Code subscription is bored
 I built a fluffy desktop cat for macOS that eats it for you
 
 hover 1 second → cat chomps one `claude -p` call → speech bubble with a tip,
-a prompt to try, a haiku, or a news headline. then naps.
+a prompt to try, a 打油诗, or a news headline. then naps.
 
 zero CPU when idle. MIT. ↓
 ```
@@ -18,7 +18,7 @@ Attach: `docs/screenshots/feed-demo.gif`
 
 ```
 six rotating tip themes, weighted toward the Claude Code niche:
-☕ tip  💡 prompt-to-try  📰 news  🤓 TIL  😆 joke  🍂 haiku
+☕ tip  💡 prompt-to-try  📰 news  🤓 TIL  😆 joke  🥟 打油诗
 
 you never get the same kind of thing twice in a row. click the bubble to copy
 to clipboard. menubar keeps the last 10.

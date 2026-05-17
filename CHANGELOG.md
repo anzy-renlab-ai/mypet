@@ -5,8 +5,8 @@ All notable changes to mypet. Format: [Keep a Changelog](https://keepachangelog.
 ## [Unreleased]
 
 ### Added
-- **Six rotating tip themes** (`claudeTip` 30% / `promptIdea` 20% / `techNews` 18% / `til` 14% / `devJoke` 10% / `haiku` 8%) — every feed surprises you with a different vibe.
-- **Theme badge on the tip bubble** (☕ tip / 💡 prompt / 📰 news / 🤓 TIL / 😆 joke / 🍂 haiku) — see what category the cat just served.
+- **Six rotating tip themes** (`claudeTip` 30% / `promptIdea` 20% / `techNews` 18% / `til` 14% / `devJoke` 10% / `dayouShi` 8%) — every feed surprises you with a different vibe.
+- **Theme badge on the tip bubble** (☕ tip / 💡 prompt / 📰 news / 🤓 TIL / 😆 joke / 🥟 打油诗) — see what category the cat just served.
 - **Click-to-copy on the tip bubble** — click any bubble to put the tip on your clipboard with a "✓ 已复制" flash.
 - **Recent tips submenu** in the menubar dropdown — last 10 successful tips with timestamps; click to copy.
 - **PNG sprite loader** in `CuteCatFace` — drop `cat-<state>.png` into `Sources/MyPet/Resources/sprites/` and the cat upgrades from emoji automatically (no code change).

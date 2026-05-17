@@ -14,7 +14,7 @@ A desktop cat that eats your Claude Code tokens
 ```
 mypet is a fluffy macOS desktop cat. Hover for 1 second, it chomps one
 `claude -p` call and a speech bubble pops with a Claude Code tip, a prompt
-to try, a TIL, or a haiku. Zero CPU at rest. Uses your existing Claude
+to try, a TIL, or a Chinese 打油诗 quatrain. Zero CPU at rest. Uses your existing Claude
 Code quota — no separate API key.
 ```
 
@@ -31,7 +31,7 @@ Hey PH! 👋
 I built mypet because my Claude Code subscription was sitting idle outside
 of work hours. Instead of forcing myself to come up with prompts, I let the
 cat surprise me — six themes (tip / prompt-to-try / news / TIL / joke /
-haiku) rotate by weight so it never feels samey.
+打油诗) rotate by weight so it never feels samey.
 
 A few things I'm proud of:
 
@@ -53,7 +53,7 @@ upgrades the cat with zero code change — if anyone here makes art and
 wants to contribute a skin, the slots are ready.
 
 Would love feedback on:
-- Theme weighting (do you want fewer haikus, more prompts?)
+- Theme weighting (do you want more dayou-shi, more prompts?)
 - macOS UX nits (snap-to-edge feels right? hover duration?)
 ```
 

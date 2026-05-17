@@ -5,7 +5,7 @@ import AppKit
 /// Tail points down to the cat's mouth.
 struct TipBubble: View {
     let text: String
-    /// Optional category badge ("tip" / "prompt" / "news" / "TIL" / "joke" / "haiku")
+    /// Optional category badge ("tip" / "prompt" / "news" / "TIL" / "joke" / "打油诗")
     /// Rendered as a tiny chip in the top-left corner of the bubble.
     var themeBadge: ThemeBadge? = nil
     let onDismiss: () -> Void
@@ -94,8 +94,8 @@ struct ThemeBadge: Equatable {
         tint: Color(red: 0.45, green: 0.50, blue: 0.80))
     static let devJoke = ThemeBadge(emoji: "😆", label: "joke",
         tint: Color(red: 0.80, green: 0.40, blue: 0.55))
-    static let haiku = ThemeBadge(emoji: "🍂", label: "haiku",
-        tint: Color(red: 0.55, green: 0.45, blue: 0.30))
+    static let dayouShi = ThemeBadge(emoji: "🥟", label: "打油诗",
+        tint: Color(red: 0.78, green: 0.42, blue: 0.30))
 }
 
 private struct BubbleTail: Shape {

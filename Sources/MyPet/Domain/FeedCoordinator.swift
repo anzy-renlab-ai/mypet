@@ -61,7 +61,7 @@ final class FeedCoordinator: ObservableObject {
         case devJoke        // one-liner programmer joke
         case til            // today-I-learned fact
         case promptIdea     // a Claude Code prompt to try right now
-        case haiku          // 5/7/5 programmer haiku
+        case dayouShi       // 程序员打油诗 (Chinese satirical verse)
 
         /// Convenience: prompt for the current system language.
         var prompt: String { prompt(for: SystemLanguage.current) }
@@ -92,9 +92,10 @@ final class FeedCoordinator: ObservableObject {
             case .promptIdea:
                 return "Suggest ONE specific prompt to type into Claude Code right now, that would teach the " +
                     "user something useful about their own codebase. Max 140 chars. Wrap in backticks. End with 🐱."
-            case .haiku:
-                return "Write ONE programmer haiku (5/7/5 syllables, three lines, slashes between lines). " +
-                    "Max 140 chars total. End with one relevant emoji."
+            case .dayouShi:
+                return "Write ONE four-line Chinese 打油诗 (dǎyóushī — a punny, irreverent " +
+                    "quatrain) about a programmer's daily struggle. Output the four lines in " +
+                    "Chinese, separated by slashes. Max 60 Chinese chars total. End with one relevant emoji."
             }
         }
 
@@ -115,9 +116,9 @@ final class FeedCoordinator: ObservableObject {
             case .promptIdea:
                 return "用中文建议一条现在就能粘进 Claude Code 的 prompt，能让用户对自己的代码库有新发现。" +
                     "不超过 100 个汉字。把 prompt 用反引号包起来。末尾加 🐱。"
-            case .haiku:
-                return "用中文写一首程序员主题的俳句（5/7/5 字三行，用斜杠分隔）。" +
-                    "总字数不超过 60 字。末尾加一个相关的 emoji。"
+            case .dayouShi:
+                return "用中文写一首四句程序员主题的打油诗，要俏皮、押韵、接地气，" +
+                    "四句之间用斜杠分隔。总字数不超过 60 字。末尾加一个相关的 emoji。"
             }
         }
     }
@@ -142,7 +143,7 @@ final class FeedCoordinator: ObservableObject {
         case ..<0.68: return .techNews
         case ..<0.82: return .til
         case ..<0.92: return .devJoke
-        default:      return .haiku
+        default:      return .dayouShi
         }
     }
 

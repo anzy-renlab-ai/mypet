@@ -15,7 +15,7 @@ Hey r/macapps! I made a tiny desktop pet for Claude Code users.
 **What it does**
 The cat lives in your bottom-right corner. Hover over it for ~1 second, it
 chomps one `claude -p` call, and a speech bubble pops with a Claude Code tip,
-a prompt to try, a TIL, a programmer joke, or a programmer haiku — six themes
+a prompt to try, a TIL, a programmer joke, or a Chinese 打油诗 quatrain — six themes
 rotate by weight so it never feels samey. Click the bubble to copy the tip
 to your clipboard.
 
