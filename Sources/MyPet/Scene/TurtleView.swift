@@ -162,28 +162,45 @@ struct CuteCatFace: View {
     /// 0–1, kept on the signature for source compat (unused now that halo is gone).
     var hoverProgress: Double = 0
 
-    /// Single sprite per state loaded on state change. No frame cycling,
-    /// no cross-fade — character consistency wins over animation novelty.
-    /// Procedural microMotion is the only motion.
-    @State private var sprite: NSImage?
+    /// Per-state frame pool + slow cross-fade between random picks.
+    @State private var frames: [NSImage] = []
+    @State private var currentIdx: Int = 0
+
+    /// Seconds between cross-fade switches.
+    private let dwellSeconds: Double = 5.0
+    /// Fade duration (seconds).
+    private let fadeSeconds: Double = 1.5
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            if let img = sprite {
+            if !frames.isEmpty {
                 let m = microMotion()
-                Image(nsImage: img)
+                Image(nsImage: frames[currentIdx % frames.count])
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(width: s, height: s)
+                    .id(currentIdx)
+                    .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
                     .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
                     .rotationEffect(.degrees(m.tilt), anchor: .bottom)
                     .offset(x: m.dx, y: m.dy)
             }
         }
         .task(id: state) {
-            sprite = Self.allSprites(for: state).first
+            frames = Self.allSprites(for: state)
+            currentIdx = 0
+            guard frames.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(dwellSeconds * 1_000_000_000))
+                if Task.isCancelled { break }
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: fadeSeconds)) {
+                        currentIdx = (currentIdx + 1) % frames.count
+                    }
+                }
+            }
         }
     }
 
