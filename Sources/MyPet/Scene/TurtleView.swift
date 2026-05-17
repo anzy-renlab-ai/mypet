@@ -174,18 +174,31 @@ struct CuteCatFace: View {
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            if !frames.isEmpty {
-                let m = microMotion()
-                Image(nsImage: frames[currentIdx % frames.count])
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: s, height: s)
-                    .id(currentIdx)
-                    .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
-                    .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
-                    .rotationEffect(.degrees(m.tilt), anchor: .bottom)
-                    .offset(x: m.dx, y: m.dy)
+            ZStack {
+                // Soft halo behind cat — masks bg-removal edge artifacts +
+                // gives the pet a "cozy glow". Color tints with state.
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [haloColor.opacity(0.55), haloColor.opacity(0)],
+                        center: .center,
+                        startRadius: s * 0.10,
+                        endRadius: s * 0.55))
+                    .blur(radius: s * 0.05)
+                    .frame(width: s * 1.10, height: s * 1.10)
+
+                if !frames.isEmpty {
+                    let m = microMotion()
+                    Image(nsImage: frames[currentIdx % frames.count])
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: s, height: s)
+                        .id(currentIdx)
+                        .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
+                        .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
+                        .rotationEffect(.degrees(m.tilt), anchor: .bottom)
+                        .offset(x: m.dx, y: m.dy)
+                }
             }
         }
         .task(id: state) {
@@ -206,6 +219,18 @@ struct CuteCatFace: View {
 
     /// Procedural micro-motion: breath + tilt + bob. Per-state tuning.
     /// Magnitudes tuned for visible-but-not-distracting motion.
+    /// State-tinted halo color (radial gradient behind cat).
+    private var haloColor: Color {
+        switch state {
+        case .excited: return Color(red: 1.00, green: 0.78, blue: 0.30)
+        case .eating: return Color(red: 1.00, green: 0.72, blue: 0.32)
+        case .purring: return Color(red: 1.00, green: 0.55, blue: 0.72)
+        case .sleepy: return Color(red: 0.62, green: 0.68, blue: 0.85)
+        case .hungry: return Color(red: 0.85, green: 0.62, blue: 0.45)
+        default: return Color(red: 1.00, green: 0.78, blue: 0.55)
+        }
+    }
+
     private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
         switch state {
         case .idle:
