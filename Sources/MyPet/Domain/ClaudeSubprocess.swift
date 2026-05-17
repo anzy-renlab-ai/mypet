@@ -266,7 +266,7 @@ final class ClaudeSubprocess {
         let raw = try await runRaw(
             binary: binary,
             args: ["-p", prompt, "--output-format", "json"],
-            timeout: 20
+            timeout: 90
         )
         let parsed = try parseFeedJSON(raw)
         if parsed.tip.isEmpty {
