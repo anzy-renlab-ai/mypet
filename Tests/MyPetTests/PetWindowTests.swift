@@ -89,6 +89,46 @@ final class PetWindowTests: XCTestCase {
         XCTAssertTrue(w.isMovableByWindowBackground)
     }
 
+    // MARK: - Snap to edge
+
+    func test_snap_pullsRightEdgeIntoMargin_whenCloseToRight() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        // Place 10pt away from right edge → within 60pt threshold
+        let startX = visible.maxX - w.frame.size.width - 10
+        w.setFrameOrigin(NSPoint(x: startX, y: visible.minY + 200))
+        w.snapToNearestEdgeIfClose()
+        let expectedX = visible.maxX - w.frame.size.width - w.snapMargin
+        XCTAssertEqual(w.frame.origin.x, expectedX, accuracy: 0.5,
+            "Window 10pt from right edge must snap to snapMargin from right")
+    }
+
+    func test_snap_isNoOp_whenFarFromAllEdges() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        // Place dead-center
+        let cx = visible.minX + (visible.width - w.frame.size.width) / 2
+        let cy = visible.minY + (visible.height - w.frame.size.height) / 2
+        w.setFrameOrigin(NSPoint(x: cx, y: cy))
+        let before = w.frame
+        w.snapToNearestEdgeIfClose()
+        XCTAssertEqual(w.frame, before,
+            "Far from any edge → must not move")
+    }
+
+    func test_snap_picksClosestEdge_whenTwoCandidates() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        // 5pt from bottom, 30pt from left — bottom is closer → bottom wins
+        w.setFrameOrigin(NSPoint(x: visible.minX + 30, y: visible.minY + 5))
+        w.snapToNearestEdgeIfClose()
+        XCTAssertEqual(w.frame.origin.y, visible.minY + w.snapMargin, accuracy: 0.5,
+            "Closer edge (bottom) should win the snap")
+    }
+
     func test_placeBottomRight_respects24ptMargin() {
         let w = PetWindow()
         w.placeBottomRight()

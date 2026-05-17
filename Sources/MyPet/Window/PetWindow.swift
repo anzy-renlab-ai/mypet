@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class PetWindow: NSWindow {
+final class PetWindow: NSWindow, NSWindowDelegate {
 
     /// Compact size — just the turtle. Used at rest.
     static let compactSize = NSSize(width: 100, height: 100)
@@ -48,11 +48,56 @@ final class PetWindow: NSWindow {
         backgroundColor = .clear
         level = .statusBar
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        // Draggable: click-drag moves the turtle. Plain hover (no click) still
-        // triggers the feed timer (handled in TurtleView); a DragGesture there
-        // cancels the timer when an actual drag starts.
+        // Draggable: click-drag moves the cat. Plain hover (no click) still
+        // triggers the feed timer (handled in CuteCatFace's hover); a DragGesture
+        // there cancels the timer when an actual drag starts.
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
+        delegate = self
+    }
+
+    // MARK: - Snap-to-edge after drag
+
+    /// Snap if the dragged window lands within this many points of a screen edge.
+    var snapThreshold: CGFloat = 60
+    /// Margin from the edge after snapping — keeps the cat from sitting flush.
+    var snapMargin: CGFloat = 24
+
+    /// Timer that fires once the user stops moving the window. windowDidMove
+    /// keeps resetting it during a drag; on rest, we snap to the nearest edge.
+    private var snapDebounce: Timer?
+
+    func windowDidMove(_ notification: Notification) {
+        snapDebounce?.invalidate()
+        snapDebounce = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async { self?.snapToNearestEdgeIfClose() }
+        }
+    }
+
+    /// If the cat sits within `snapThreshold` of any screen edge, snap to that
+    /// edge (with `snapMargin` inset) using an animated frame change.
+    func snapToNearestEdgeIfClose() {
+        guard let screen = self.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        var f = frame
+
+        let distLeft = f.minX - visible.minX
+        let distRight = visible.maxX - f.maxX
+        let distBottom = f.minY - visible.minY
+        let distTop = visible.maxY - f.maxY
+
+        // Find the smallest edge distance below the threshold.
+        let candidates: [(CGFloat, () -> Void)] = [
+            (distLeft,   { f.origin.x = visible.minX + self.snapMargin }),
+            (distRight,  { f.origin.x = visible.maxX - f.size.width - self.snapMargin }),
+            (distBottom, { f.origin.y = visible.minY + self.snapMargin }),
+            (distTop,    { f.origin.y = visible.maxY - f.size.height - self.snapMargin }),
+        ]
+        guard let winner = candidates.filter({ $0.0 < snapThreshold })
+            .min(by: { $0.0 < $1.0 }) else { return }
+        winner.1()
+        if f == frame { return }
+        setFrame(f, display: true, animate: true)
     }
 
     /// Re-anchor the bottom-right corner after a resize.
