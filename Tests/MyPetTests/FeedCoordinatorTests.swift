@@ -193,6 +193,46 @@ final class FeedCoordinatorTests: XCTestCase {
         XCTAssertEqual(coord.state, .idle)
     }
 
+    // MARK: - Theme rotation
+
+    func test_nextTheme_weightedDistribution_pickedTheme_isValid() {
+        // Sweep the unit interval — every value should produce one of the
+        // declared themes, with no panic / out-of-range.
+        for i in 0..<200 {
+            let r = Double(i) / 200.0
+            let theme = FeedCoordinator.nextTheme(rng: { r })
+            XCTAssertTrue(
+                FeedCoordinator.TipTheme.allCases.contains(theme),
+                "nextTheme returned unknown case at r=\(r): \(theme)"
+            )
+            XCTAssertFalse(theme.prompt.isEmpty)
+        }
+    }
+
+    func test_nextTheme_lowR_picksClaudeTip_highR_picksHaiku() {
+        // Cumulative cutpoints (claudeTip .. haiku) match the published
+        // weights — guards against accidental re-ordering of the switch.
+        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.0 }), .claudeTip)
+        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.29 }), .claudeTip)
+        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.30 }), .promptIdea)
+        XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.95 }), .haiku)
+    }
+
+    func test_feed_recordsLastTheme_andSendsThatPromptToFeeder() async {
+        let feeder = MockFeeder(result: .success("tip"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.01
+        coord.tipDisplaySeconds = 0.01
+
+        await coord.feed()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // lastTheme must be a real case
+        XCTAssertTrue(FeedCoordinator.TipTheme.allCases.contains(coord.lastTheme))
+        // The prompt sent matches that theme's prompt (no stale defaultPrompt)
+        XCTAssertEqual(feeder.lastPrompt, coord.lastTheme.prompt)
+    }
+
     func test_wake_fromSleepy_returnsIdle() async {
         let feeder = MockFeeder(result: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)

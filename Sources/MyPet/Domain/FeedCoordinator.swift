@@ -52,12 +52,62 @@ final class FeedCoordinator: ObservableObject {
 
     // MARK: - Public API
 
-    /// Returns the prompt currently used for sprite generation.
-    /// Hardcoded for v0.1; v0.2 will surface a setting.
-    static let defaultPrompt =
-        "Give me ONE Claude Code tip OR one short tech news headline. " +
-        "Output exactly one item. Max 140 characters. No preamble, no list markers. " +
-        "End with one relevant emoji."
+    /// Theme of a single feed. Rotating among themes makes every feed feel
+    /// different — programmers come back to see what the cat says next.
+    /// The active theme is published so the UI can hint it (optional).
+    enum TipTheme: String, CaseIterable {
+        case claudeTip      // Claude Code tip
+        case techNews       // tiny tech news headline
+        case devJoke        // one-liner programmer joke
+        case til            // today-I-learned fact
+        case promptIdea     // a Claude Code prompt to try right now
+        case haiku          // 5/7/5 programmer haiku
+
+        var prompt: String {
+            switch self {
+            case .claudeTip:
+                return "Share ONE non-obvious Claude Code tip a daily user would actually thank you for. " +
+                    "Max 140 chars. No preamble, no list markers. End with one relevant emoji."
+            case .techNews:
+                return "Give ONE short tech-news headline from the last 7 days. " +
+                    "Max 140 chars. Just the headline, no source. End with one relevant emoji."
+            case .devJoke:
+                return "Tell ONE original one-liner programmer joke. Max 140 chars. " +
+                    "Make it actually funny (groan-funny ok). End with one relevant emoji."
+            case .til:
+                return "Share ONE 'today I learned' fact about software / computing that a senior engineer " +
+                    "would still find surprising. Max 140 chars. End with one relevant emoji."
+            case .promptIdea:
+                return "Suggest ONE specific prompt to type into Claude Code right now, that would teach the " +
+                    "user something useful about their own codebase. Max 140 chars. Wrap in backticks. End with 🐱."
+            case .haiku:
+                return "Write ONE programmer haiku (5/7/5 syllables, three lines, slashes between lines). " +
+                    "Max 140 chars total. End with one relevant emoji."
+            }
+        }
+    }
+
+    /// Pick a theme for the next feed. Weighted toward Claude Code content
+    /// (tip + promptIdea = ~50%) since that's the niche the project lives in.
+    static func nextTheme(rng: () -> Double = { Double.random(in: 0..<1) }) -> TipTheme {
+        let r = rng()
+        switch r {
+        case ..<0.30: return .claudeTip
+        case ..<0.50: return .promptIdea
+        case ..<0.68: return .techNews
+        case ..<0.82: return .til
+        case ..<0.92: return .devJoke
+        default:      return .haiku
+        }
+    }
+
+    /// Theme used by the most recent (or in-flight) feed. Surfaced for tests
+    /// and a future UI hint.
+    @Published private(set) var lastTheme: TipTheme = .claudeTip
+
+    /// Default prompt for one-shot callers / smoke tests. Keep the symbol
+    /// so existing tests that read `defaultPrompt` still compile.
+    static let defaultPrompt = TipTheme.claudeTip.prompt
 
     /// User clicked Feed. Orchestrates the full cycle.
     func feed() async {
@@ -84,8 +134,10 @@ final class FeedCoordinator: ObservableObject {
         tip = nil
         lastError = nil
 
-        // Call feeder (subprocess, may take seconds)
-        let result = await feeder.feed(prompt: Self.defaultPrompt)
+        // Pick a fresh theme per feed and route its prompt to the subprocess.
+        let theme = Self.nextTheme()
+        lastTheme = theme
+        let result = await feeder.feed(prompt: theme.prompt)
 
         switch result {
         case .success(let receivedTip):
