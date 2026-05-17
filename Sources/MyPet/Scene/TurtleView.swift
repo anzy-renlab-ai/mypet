@@ -173,10 +173,13 @@ struct CuteCatFace: View {
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            if !frames.isEmpty {
-                let idx = Int(t * framesPerSecond) % frames.count
+            // Stop-motion frame cycling produced visible character drift across
+            // Minimax-generated frames — "uncanny morphing kittens" effect.
+            // Use only the first frame per state. Procedural microMotion below
+            // gives the motion; sprite stays consistent.
+            if let sprite = frames.first {
                 let m = microMotion()
-                Image(nsImage: frames[idx])
+                Image(nsImage: sprite)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
