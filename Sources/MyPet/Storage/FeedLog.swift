@@ -45,6 +45,17 @@ actor FeedLog {
         return entries.last?.ts
     }
 
+    /// Most recent N successful tips, newest first. Skips failure entries
+    /// (exitCode != 0) and empty tips. Used by the menubar "Recent tips" submenu.
+    func recentTips(limit: Int = 10) async throws -> [Entry] {
+        let entries = try readUnchecked()
+        return entries
+            .reversed()
+            .filter { $0.exitCode == 0 && !$0.tip.isEmpty }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     func cooldownActive(seconds: TimeInterval) async throws -> Bool {
         guard let last = try await lastFeedTimestamp() else { return false }
         return Date().timeIntervalSince(last) < seconds

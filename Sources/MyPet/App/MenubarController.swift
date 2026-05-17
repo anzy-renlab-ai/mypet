@@ -11,15 +11,18 @@ final class MenubarController: NSObject {
 
     private var statusItem: NSStatusItem?
     private let coordinator: FeedCoordinator
+    private let feedLog: FeedLog
     private let onShowOnboarding: () -> Void
     private let onQuit: () -> Void
 
     init(
         coordinator: FeedCoordinator,
+        feedLog: FeedLog,
         onShowOnboarding: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
         self.coordinator = coordinator
+        self.feedLog = feedLog
         self.onShowOnboarding = onShowOnboarding
         self.onQuit = onQuit
         super.init()
@@ -52,6 +55,16 @@ final class MenubarController: NSObject {
         )
         feedItem.target = self
         menu.addItem(feedItem)
+
+        // Recent tips submenu — populated lazily on open
+        let recentParent = NSMenuItem(title: "Recent tips", action: nil, keyEquivalent: "")
+        let recentSubmenu = NSMenu(title: "Recent tips")
+        let placeholder = NSMenuItem(title: "(载入中…)", action: nil, keyEquivalent: "")
+        placeholder.isEnabled = false
+        recentSubmenu.addItem(placeholder)
+        recentSubmenu.delegate = self
+        recentParent.submenu = recentSubmenu
+        menu.addItem(recentParent)
 
         menu.addItem(.separator())
 
@@ -92,6 +105,44 @@ final class MenubarController: NSObject {
         }
     }
 
+    @objc private func copyTipFromMenu(_ sender: NSMenuItem) {
+        guard let tip = sender.representedObject as? String else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(tip, forType: .string)
+    }
+
+    /// Refill the Recent tips submenu from FeedLog. Capped to 10 entries.
+    private func refreshRecentTipsSubmenu(_ submenu: NSMenu) {
+        Task { @MainActor in
+            let entries = (try? await feedLog.recentTips(limit: 10)) ?? []
+            submenu.removeAllItems()
+            if entries.isEmpty {
+                let empty = NSMenuItem(title: "(还没喂过)", action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                submenu.addItem(empty)
+                return
+            }
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MM-dd HH:mm"
+            for entry in entries {
+                let shortTip = entry.tip.count > 50
+                    ? String(entry.tip.prefix(49)) + "…"
+                    : entry.tip
+                let title = "\(fmt.string(from: entry.ts))  \(shortTip)"
+                let item = NSMenuItem(title: title, action: #selector(copyTipFromMenu(_:)), keyEquivalent: "")
+                item.target = self
+                item.toolTip = entry.tip
+                item.representedObject = entry.tip
+                submenu.addItem(item)
+            }
+            submenu.addItem(.separator())
+            let hint = NSMenuItem(title: "点击复制 · 共 \(entries.count) 条", action: nil, keyEquivalent: "")
+            hint.isEnabled = false
+            submenu.addItem(hint)
+        }
+    }
+
     @objc private func toggleLogin() {
         if LoginItem.isEnabled() {
             LoginItem.disable()
@@ -113,8 +164,13 @@ final class MenubarController: NSObject {
 
 extension MenubarController: NSMenuDelegate {
     nonisolated func menuWillOpen(_ menu: NSMenu) {
-        // Triggered each open — keep label fresh.
+        // Triggered each open — keep label fresh + refill Recent tips submenu.
+        let menuTitle = menu.title
         Task { @MainActor in
+            if menuTitle == "Recent tips" {
+                self.refreshRecentTipsSubmenu(menu)
+                return
+            }
             if let item = menu.items.first(where: { $0.action == #selector(toggleLogin) }) {
                 item.title = LoginItem.isEnabled() ? "✓ 开机自启" : "开机自启"
             }

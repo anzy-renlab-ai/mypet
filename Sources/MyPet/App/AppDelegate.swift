@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menubar = MenubarController(
             coordinator: coordinator,
+            feedLog: feedLog,
             onShowOnboarding: { [weak self] in
                 self?.showOnboarding()
             },

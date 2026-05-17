@@ -3,9 +3,14 @@
 > A fluffy desktop cat that eats your Claude Code tokens.
 >
 > Hover for one second. The cat chomps one `claude -p` call and bubbles back
-> a Claude Code tip or tech-news headline. Then goes back to sleep.
->
-> macOS 13+ · SwiftUI · zero deps · MIT
+> a Claude Code tip, a prompt to try, a haiku, or a tech-news headline.
+> Then goes back to sleep.
+
+[![CI](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml/badge.svg)](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://www.apple.com/macos)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-AppKit-orange)](https://developer.apple.com/swiftui)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-84%20passing-success)](Tests)
 
 <p align="center">
   <img src="docs/screenshots/feed-demo.gif" width="480" alt="hover the cat for 1 second, it chomps and a Claude Code tip pops up">
@@ -42,12 +47,29 @@ visual — still zero background work.
 
 | State | When | Looks like |
 |---|---|---|
-| `idle` | resting | gentle sway, slow blink |
-| `eating` | feeding now | happy `^ ^` eyes, mouth open, sparkles |
-| `excited` | feed succeeded | jump, stars overhead |
-| `purring` | tip showing | heart eyes, ♡ overhead |
-| `sleepy` | 2h idle | closed eyes, head tilt, `zZz` |
-| `hungry` | 24h no feed / error | frown, single tear, ear droop |
+| `idle` | resting | 🐱 gentle sway, slow blink |
+| `eating` | feeding now | 😺 mouth open, ⚡ + 🐟 sparkles |
+| `excited` | feed succeeded | 😸 jump, ✦ stars overhead |
+| `purring` | tip showing | 😻 heart eyes, ♡ overhead |
+| `sleepy` | 2h idle | 😽 closed eyes, head tilt, `zZz` |
+| `hungry` | 24h no feed / error | 😿 frown, single tear |
+
+## Tip themes
+
+Every feed picks one of six themes (weighted toward the Claude Code niche)
+so you don't get the same vibe twice in a row:
+
+| Badge | Theme | Weight | What you get |
+|---|---|---|---|
+| ☕ | `claudeTip` | 30% | Non-obvious Claude Code tip |
+| 💡 | `promptIdea` | 20% | A specific prompt to type into Claude Code now |
+| 📰 | `techNews` | 18% | One-line tech-news headline |
+| 🤓 | `til` | 14% | "Today I learned" fact a senior eng would still find surprising |
+| 😆 | `devJoke` | 10% | Programmer one-liner |
+| 🍂 | `haiku` | 8% | Programmer haiku (5/7/5) |
+
+Click the bubble to copy the tip to your clipboard. The menubar 🐾 dropdown
+keeps the last 10 tips under **Recent tips** — click any to copy.
 
 ## Requirements
 
