@@ -63,7 +63,19 @@ final class FeedCoordinator: ObservableObject {
         case promptIdea     // a Claude Code prompt to try right now
         case haiku          // 5/7/5 programmer haiku
 
-        var prompt: String {
+        /// Convenience: prompt for the current system language.
+        var prompt: String { prompt(for: SystemLanguage.current) }
+
+        /// Locale-aware prompt. Chinese users get Chinese prompts so the tip
+        /// itself comes back in Chinese — otherwise English.
+        func prompt(for lang: SystemLanguage) -> String {
+            switch lang {
+            case .zh: return promptZh
+            case .en: return promptEn
+            }
+        }
+
+        private var promptEn: String {
             switch self {
             case .claudeTip:
                 return "Share ONE non-obvious Claude Code tip a daily user would actually thank you for. " +
@@ -84,6 +96,39 @@ final class FeedCoordinator: ObservableObject {
                 return "Write ONE programmer haiku (5/7/5 syllables, three lines, slashes between lines). " +
                     "Max 140 chars total. End with one relevant emoji."
             }
+        }
+
+        private var promptZh: String {
+            switch self {
+            case .claudeTip:
+                return "用中文给我一条非常实用、不为人熟知的 Claude Code 使用小技巧。" +
+                    "不超过 100 个汉字。不要前言、不要列表符号。末尾加一个相关的 emoji。"
+            case .techNews:
+                return "用中文给我一句过去 7 天内的科技新闻头条。" +
+                    "不超过 100 个汉字。只给标题，不给来源。末尾加一个相关的 emoji。"
+            case .devJoke:
+                return "用中文讲一个程序员一句话冷笑话，原创为佳。不超过 100 个汉字。" +
+                    "要真的好笑（无奈一笑也算）。末尾加一个相关的 emoji。"
+            case .til:
+                return "用中文分享一条软件 / 计算机领域的「今日新知」，要让资深工程师也觉得意外。" +
+                    "不超过 100 个汉字。末尾加一个相关的 emoji。"
+            case .promptIdea:
+                return "用中文建议一条现在就能粘进 Claude Code 的 prompt，能让用户对自己的代码库有新发现。" +
+                    "不超过 100 个汉字。把 prompt 用反引号包起来。末尾加 🐱。"
+            case .haiku:
+                return "用中文写一首程序员主题的俳句（5/7/5 字三行，用斜杠分隔）。" +
+                    "总字数不超过 60 字。末尾加一个相关的 emoji。"
+            }
+        }
+    }
+
+    /// Coarse language bucket — keeps prompt switching to two well-tested cases.
+    enum SystemLanguage {
+        case en, zh
+
+        static var current: SystemLanguage {
+            let primary = Locale.preferredLanguages.first ?? Locale.current.identifier
+            return primary.lowercased().hasPrefix("zh") ? .zh : .en
         }
     }
 

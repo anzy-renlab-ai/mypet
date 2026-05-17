@@ -218,6 +218,18 @@ final class FeedCoordinatorTests: XCTestCase {
         XCTAssertEqual(FeedCoordinator.nextTheme(rng: { 0.95 }), .haiku)
     }
 
+    func test_prompt_localeAware_zhVsEn_areDifferent() {
+        for theme in FeedCoordinator.TipTheme.allCases {
+            let en = theme.prompt(for: .en)
+            let zh = theme.prompt(for: .zh)
+            XCTAssertFalse(en.isEmpty)
+            XCTAssertFalse(zh.isEmpty)
+            XCTAssertNotEqual(en, zh, "\(theme) en and zh prompts must diverge")
+            // Sanity: zh prompt asks for Chinese output ("中文")
+            XCTAssertTrue(zh.contains("中文"), "\(theme) zh prompt should request Chinese output")
+        }
+    }
+
     func test_feed_recordsLastTheme_andSendsThatPromptToFeeder() async {
         let feeder = MockFeeder(result: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
