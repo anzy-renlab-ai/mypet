@@ -162,24 +162,17 @@ struct CuteCatFace: View {
     /// 0–1, kept on the signature for source compat (unused now that halo is gone).
     var hoverProgress: Double = 0
 
-    /// Per-state frame sequence. Cycled at `framesPerSecond` via `t`.
-    /// Loaded on state change.
-    @State private var frames: [NSImage] = []
-
-    /// Frame rate for sequence playback. 8fps reads as a deliberate
-    /// "stop-motion" feel without being jittery.
-    private let framesPerSecond: Double = 8.0
+    /// Single sprite per state loaded on state change. No frame cycling,
+    /// no cross-fade — character consistency wins over animation novelty.
+    /// Procedural microMotion is the only motion.
+    @State private var sprite: NSImage?
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            // Stop-motion frame cycling produced visible character drift across
-            // Minimax-generated frames — "uncanny morphing kittens" effect.
-            // Use only the first frame per state. Procedural microMotion below
-            // gives the motion; sprite stays consistent.
-            if let sprite = frames.first {
+            if let img = sprite {
                 let m = microMotion()
-                Image(nsImage: sprite)
+                Image(nsImage: img)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
@@ -190,7 +183,7 @@ struct CuteCatFace: View {
             }
         }
         .task(id: state) {
-            frames = Self.allSprites(for: state)
+            sprite = Self.allSprites(for: state).first
         }
     }
 
