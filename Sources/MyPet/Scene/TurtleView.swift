@@ -25,26 +25,15 @@ struct TurtleView: View {
         self.onFeed = onFeed
     }
 
-    /// True when the cat needs the 60fps render loop. Includes:
-    ///  - cursor in the approach zone (token follower needs to animate)
-    ///  - any non-idle state
-    private var needsAnimation: Bool {
-        cursorPos != nil || state != .idle
-    }
-
     /// Approach-zone radius in points. Cursor inside this → spawn the
     /// following token coin.
     private let approachRadius: CGFloat = 80
 
     var body: some View {
-        Group {
-            if needsAnimation {
-                TimelineView(.animation) { context in
-                    content(at: context.date)
-                }
-            } else {
-                content(at: Date())
-            }
+        // Single TimelineView always running. .animation = 60fps; the cat
+        // micro-motion is procedural so cost is just a few transforms per frame.
+        TimelineView(.animation) { ctx in
+            content(at: ctx.date)
         }
         .contentShape(Rectangle())
         .frame(width: 180, height: 180)
@@ -92,7 +81,7 @@ struct TurtleView: View {
                 }
                 Spacer(minLength: 0)
                 CuteCatFace(state: state, t: t)
-                    .frame(width: 80, height: 80)
+                    .frame(width: 96, height: 96)
                     .scaleEffect(motion.scale, anchor: .bottom)
                     .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
                     .offset(x: motion.sway, y: motion.bounce)
@@ -205,26 +194,34 @@ struct CuteCatFace: View {
     }
 
     /// Procedural micro-motion: breath + tilt + bob. Per-state tuning.
+    /// Magnitudes tuned for visible-but-not-distracting motion.
     private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
         switch state {
         case .idle:
-            let breath = CGFloat(sin(t * 1.4)) * 0.012
-            return (1.0 + breath, 1.0 - breath, sin(t * 0.6) * 0.6, 0, 0)
+            // Visible breathing: ±3% scale + 1.5° gentle head tilt
+            let breath = CGFloat(sin(t * 1.4)) * 0.030
+            let sway = CGFloat(sin(t * 0.8)) * 2.0
+            return (1.0 + breath, 1.0 - breath * 0.6, sin(t * 0.6) * 1.5, sway, 0)
         case .eating:
+            // Pronounced chomp: scale + dip
             let chomp = CGFloat(abs(sin(t * 6.0)))
-            return (1.0 - chomp * 0.05, 1.0 + chomp * 0.05, sin(t * 3.0) * 1.2, 0, -chomp * 2)
+            return (1.0 - chomp * 0.10, 1.0 + chomp * 0.10, sin(t * 3.0) * 3.0, 0, -chomp * 4)
         case .excited:
+            // Big jump
             let bounce = CGFloat(abs(sin(t * 4.5)))
-            return (1.0 + bounce * 0.08, 1.0 + bounce * 0.10, 0, 0, -bounce * 6)
+            return (1.0 + bounce * 0.12, 1.0 + bounce * 0.14, 0, 0, -bounce * 14)
         case .purring:
-            let purr = CGFloat(sin(t * 3.0)) * 0.02
-            return (1.0 + purr, 1.0 - purr * 0.5, 0, 0, 0)
+            // Slow rhythmic purr scale
+            let purr = CGFloat(sin(t * 3.0)) * 0.04
+            return (1.0 + purr, 1.0 - purr * 0.5, sin(t * 1.2) * 0.5, 0, 0)
         case .sleepy:
-            let nap = CGFloat(sin(t * 0.8)) * 0.008
-            return (1.0 + nap, 1.0 - nap, sin(t * 0.4) * 1.5 - 4, 0, 0)
+            // Head tilted, slow breath
+            let nap = CGFloat(sin(t * 0.8)) * 0.020
+            return (1.0 + nap, 1.0 - nap, sin(t * 0.4) * 2.0 - 6, 0, 0)
         case .hungry:
+            // Visible side-to-side sway
             let sway = CGFloat(sin(t * 1.2))
-            return (1.0, 1.0, 0, sway * 1.5, 0)
+            return (1.0, 1.0, sin(t * 0.6) * 1.0, sway * 4.0, 0)
         }
     }
 
