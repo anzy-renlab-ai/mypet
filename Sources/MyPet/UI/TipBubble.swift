@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Speech bubble overlay shown above the cat after a feed.
 /// Tail points down to the cat's mouth.
@@ -10,10 +11,11 @@ struct TipBubble: View {
     let onDismiss: () -> Void
 
     @State private var appear = false
+    @State private var copied = false
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(text)
+            Text(copied ? "✓ 已复制到剪贴板" : text)
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.10))
                 .multilineTextAlignment(.center)
@@ -55,17 +57,25 @@ struct TipBubble: View {
             }
         }
         .onTapGesture {
-            withAnimation(.easeOut(duration: 0.22)) {
-                appear = false
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                onDismiss()
+            copyToPasteboard(text)
+            withAnimation(.easeInOut(duration: 0.18)) { copied = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+                withAnimation(.easeOut(duration: 0.22)) { appear = false }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                    onDismiss()
+                }
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isStaticText)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel("猫说: \(text)")
-        .accessibilityHint("点击关闭")
+        .accessibilityHint("点击复制到剪贴板并关闭")
+    }
+
+    private func copyToPasteboard(_ s: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(s, forType: .string)
     }
 }
 
