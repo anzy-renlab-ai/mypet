@@ -131,7 +131,7 @@ struct PetRootView: View {
     var body: some View {
         VStack(spacing: 4) {
             if let tip = coordinator.tip {
-                TipBubble(text: tip) {
+                TipBubble(text: tip, themeBadge: themeBadge(for: coordinator)) {
                     coordinator.dismissTip()
                 }
                 .padding(.top, 8)
@@ -151,5 +151,21 @@ struct PetRootView: View {
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: coordinator.tip)
+    }
+
+    /// Hide the badge for first-feed welcome / cooldown / error tips —
+    /// those are app messages, not LLM output.
+    private func themeBadge(for coord: FeedCoordinator) -> ThemeBadge? {
+        guard coord.lastError == nil else { return nil }
+        if coord.tip?.contains("消化") == true { return nil }
+        if coord.tip?.contains("接我回家") == true { return nil }
+        switch coord.lastTheme {
+        case .claudeTip:  return .claudeTip
+        case .promptIdea: return .promptIdea
+        case .techNews:   return .techNews
+        case .til:        return .til
+        case .devJoke:    return .devJoke
+        case .haiku:      return .haiku
+        }
     }
 }
