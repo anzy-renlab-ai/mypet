@@ -189,12 +189,41 @@ struct CuteCatFace: View {
                         endRadius: s * 0.55))
                     .blur(radius: s * 0.04)
 
-                // The cat
-                Text(emoji)
-                    .font(.system(size: s * 0.78))
-                    .scaleEffect(emojiScale)
+                // The cat — prefer a bundled sprite, fall back to emoji
+                if let sprite = stateImage {
+                    Image(nsImage: sprite)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: s, height: s)
+                        .scaleEffect(emojiScale)
+                } else {
+                    Text(emoji)
+                        .font(.system(size: s * 0.78))
+                        .scaleEffect(emojiScale)
+                }
             }
         }
+    }
+
+    /// Sprite for the current state. Returns nil if no PNG bundled —
+    /// caller then renders the emoji fallback. PNGs go in
+    /// `Sources/MyPet/Resources/sprites/cat-<state>.png`.
+    /// Lookup is by name + extension via `Bundle.module`.
+    private var stateImage: NSImage? {
+        let name: String
+        switch state {
+        case .idle: name = "cat-idle"
+        case .eating: name = "cat-eating"
+        case .excited: name = "cat-excited"
+        case .purring: name = "cat-purring"
+        case .sleepy: name = "cat-sleepy"
+        case .hungry: name = "cat-hungry"
+        }
+        guard let url = Bundle.module.url(forResource: name, withExtension: "png") else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
     }
 
     /// Hover intensifies the halo from baseline (0.40) up to (0.70).

@@ -8,7 +8,7 @@
 > macOS 13+ · SwiftUI · zero deps · MIT
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" width="420" alt="fluffy orange tabby mypet, idle, in the bottom-right of the screen">
+  <img src="docs/screenshots/feed-demo.gif" width="480" alt="hover the cat for 1 second, it chomps and a Claude Code tip pops up">
 </p>
 
 ## Why
