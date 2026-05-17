@@ -162,19 +162,21 @@ struct CuteCatFace: View {
     /// 0–1, kept on the signature for source compat (unused now that halo is gone).
     var hoverProgress: Double = 0
 
-    /// Picked sprite for the current state. Re-rolled each time `state`
-    /// changes (via `.task(id: state)`) so multi-variant packs feel alive.
-    @State private var currentSprite: NSImage?
+    /// Per-state frame sequence. Cycled at `framesPerSecond` via `t`.
+    /// Loaded on state change.
+    @State private var frames: [NSImage] = []
+
+    /// Frame rate for sequence playback. 8fps reads as a deliberate
+    /// "stop-motion" feel without being jittery.
+    private let framesPerSecond: Double = 8.0
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            if let sprite = currentSprite {
-                // Procedural micro-motion based on `t` — no variant flipping.
-                // Breathing scale + tiny tilt + occasional "squash on landing"
-                // make a single still feel alive without flicker.
+            if !frames.isEmpty {
+                let idx = Int(t * framesPerSecond) % frames.count
                 let m = microMotion()
-                Image(nsImage: sprite)
+                Image(nsImage: frames[idx])
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
@@ -185,11 +187,7 @@ struct CuteCatFace: View {
             }
         }
         .task(id: state) {
-            // One sprite per state. If only `cat-<state>.png` exists, pick it.
-            // If multi-variant pack exists, pick the first as the canonical
-            // (numbered variants kept for future hand-curated states).
-            let all = Self.allSprites(for: state)
-            currentSprite = all.first
+            frames = Self.allSprites(for: state)
         }
     }
 
