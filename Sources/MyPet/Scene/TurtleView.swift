@@ -80,11 +80,11 @@ struct TurtleView: View {
                     Spacer().frame(height: 16)
                 }
                 Spacer(minLength: 0)
+                // CuteCatFace handles per-state procedural motion internally.
+                // Don't double-apply transforms here — that was producing a
+                // visible compound jitter / ghost outline.
                 CuteCatFace(state: state, t: t)
                     .frame(width: 96, height: 96)
-                    .scaleEffect(motion.scale, anchor: .bottom)
-                    .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
-                    .offset(x: motion.sway, y: motion.bounce)
                 Spacer().frame(height: 12)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
