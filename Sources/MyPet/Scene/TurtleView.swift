@@ -162,76 +162,84 @@ struct TurtleView: View {
     }
 }
 
-// MARK: - The cat itself: emoji on a fluff halo
+// MARK: - The cat itself: PNG sprite, no halo, no emoji
 
-/// Renders a state-specific cat emoji on a soft glowing halo.
-/// Apple's emoji art is the cutest cat we can ship without bundling assets,
-/// and it scales crisply at any size.
+/// Renders a state-specific cat PNG. Multi-variant packs cross-fade.
+/// If a state has no bundled sprite, falls back to idle. If neither exists,
+/// renders nothing (the slot is empty until user drops a PNG in).
 struct CuteCatFace: View {
     let state: PetState
     let t: TimeInterval
-    /// 0–1, pulses halo intensity while user is hovering to feed.
+    /// 0–1, kept on the signature for source compat (unused now that halo is gone).
     var hoverProgress: Double = 0
 
-    /// Picked sprite for the current state. nil → emoji fallback.
-    /// Re-rolled each time `state` changes (via `.task(id: state)`) so
-    /// multi-variant packs (cat-idle-1.png, cat-idle-2.png, ...) feel alive.
+    /// Picked sprite for the current state. Re-rolled each time `state`
+    /// changes (via `.task(id: state)`) so multi-variant packs feel alive.
     @State private var currentSprite: NSImage?
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            ZStack {
-                // Soft cozy halo — color tracks state, intensity bumps on hover
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [haloColor.opacity(haloAlpha), haloColor.opacity(0)],
-                        center: .center,
-                        startRadius: s * 0.18,
-                        endRadius: s * 0.55))
-                    .blur(radius: s * 0.04)
-
-                // The cat — prefer a bundled sprite, fall back to emoji
-                if let sprite = currentSprite {
-                    Image(nsImage: sprite)
-                        .resizable()
-                        .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: s, height: s)
-                        .scaleEffect(emojiScale)
-                } else {
-                    Text(emoji)
-                        .font(.system(size: s * 0.78))
-                        .scaleEffect(emojiScale)
-                }
+            if let sprite = currentSprite {
+                // Procedural micro-motion based on `t` — no variant flipping.
+                // Breathing scale + tiny tilt + occasional "squash on landing"
+                // make a single still feel alive without flicker.
+                let m = microMotion()
+                Image(nsImage: sprite)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: s, height: s)
+                    .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
+                    .rotationEffect(.degrees(m.tilt), anchor: .bottom)
+                    .offset(x: m.dx, y: m.dy)
             }
         }
         .task(id: state) {
-            let variants = Self.allSprites(for: state)
-            currentSprite = variants.randomElement()
-            // If 2+ variants exist for this state, cross-fade through them
-            // every ~4s while the state stays the same. .task cancellation
-            // on state change makes this clean.
-            guard variants.count > 1 else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 4_000_000_000)
-                if Task.isCancelled { break }
-                let next = variants.filter { $0 !== currentSprite }.randomElement() ?? variants.randomElement()
-                await MainActor.run {
-                    withAnimation(.easeInOut(duration: 0.55)) {
-                        currentSprite = next
-                    }
-                }
-            }
+            // One sprite per state. If only `cat-<state>.png` exists, pick it.
+            // If multi-variant pack exists, pick the first as the canonical
+            // (numbered variants kept for future hand-curated states).
+            let all = Self.allSprites(for: state)
+            currentSprite = all.first
         }
     }
 
-    /// All sprite variants for the state from the bundle. Supports
-    /// multi-variant packs: `cat-idle.png` + `cat-idle-2.png` ... `cat-idle-9.png`
-    /// are all eligible. Returns empty if no PNGs bundled — caller then
-    /// renders the emoji fallback.
+    /// Procedural micro-motion: breath + tilt + bob. Per-state tuning.
+    private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
+        switch state {
+        case .idle:
+            let breath = CGFloat(sin(t * 1.4)) * 0.012
+            return (1.0 + breath, 1.0 - breath, sin(t * 0.6) * 0.6, 0, 0)
+        case .eating:
+            let chomp = CGFloat(abs(sin(t * 6.0)))
+            return (1.0 - chomp * 0.05, 1.0 + chomp * 0.05, sin(t * 3.0) * 1.2, 0, -chomp * 2)
+        case .excited:
+            let bounce = CGFloat(abs(sin(t * 4.5)))
+            return (1.0 + bounce * 0.08, 1.0 + bounce * 0.10, 0, 0, -bounce * 6)
+        case .purring:
+            let purr = CGFloat(sin(t * 3.0)) * 0.02
+            return (1.0 + purr, 1.0 - purr * 0.5, 0, 0, 0)
+        case .sleepy:
+            let nap = CGFloat(sin(t * 0.8)) * 0.008
+            return (1.0 + nap, 1.0 - nap, sin(t * 0.4) * 1.5 - 4, 0, 0)
+        case .hungry:
+            let sway = CGFloat(sin(t * 1.2))
+            return (1.0, 1.0, 0, sway * 1.5, 0)
+        }
+    }
+
+    /// All sprite variants for the state from the bundle. Cascade:
+    /// `cat-<state>.png` + numbered variants → if none → `cat-idle.png` pack.
+    /// Returns empty if not even idle exists.
     static func allSprites(for state: PetState) -> [NSImage] {
-        let base = "cat-\(stateSlug(state))"
+        let direct = loadVariants(slug: stateSlug(state))
+        if !direct.isEmpty { return direct }
+        // Fallback: use idle pack for any state that has no dedicated sprite yet
+        return loadVariants(slug: "idle")
+    }
+
+    private static func loadVariants(slug: String) -> [NSImage] {
+        let base = "cat-\(slug)"
         var images: [NSImage] = []
         if let url = Bundle.module.url(forResource: base, withExtension: "png"),
            let img = NSImage(contentsOf: url) {
@@ -262,44 +270,7 @@ struct CuteCatFace: View {
         }
     }
 
-    /// Hover intensifies the halo from baseline (0.40) up to (0.70).
-    private var haloAlpha: Double {
-        let base: Double
-        switch state {
-        case .excited: base = 0.70
-        case .eating: base = 0.55
-        case .purring: base = 0.55
-        case .sleepy: base = 0.25
-        case .hungry: base = 0.30
-        default: base = 0.40
-        }
-        return min(0.85, base + hoverProgress * 0.30)
-    }
-
-    private var haloColor: Color {
-        switch state {
-        case .excited: return Color(red: 1.00, green: 0.78, blue: 0.30)
-        case .eating: return Color(red: 1.00, green: 0.62, blue: 0.32)
-        case .purring: return Color(red: 1.00, green: 0.55, blue: 0.70)
-        case .sleepy: return Color(red: 0.65, green: 0.62, blue: 0.78)
-        case .hungry: return Color(red: 0.85, green: 0.62, blue: 0.45)
-        default: return Color(red: 1.00, green: 0.70, blue: 0.40)
-        }
-    }
-
-    /// Emoji choice = the expression. All cat-face emoji for visual consistency.
-    private var emoji: String {
-        switch state {
-        case .idle: return "🐱"
-        case .eating: return "😺"   // smiling open-mouth cat — chomp time
-        case .excited: return "😸"  // grinning cat with smiling eyes — yay
-        case .purring: return "😻"  // heart-eyes cat — show tip
-        case .sleepy: return "😽"   // kissing cat (eyes closed) — naptime
-        case .hungry: return "😿"   // crying cat
-        }
-    }
-
-    /// Tiny breathing scale-jitter on the emoji itself for purring/idle.
+    /// Tiny breathing scale-jitter for purring/idle.
     private var emojiScale: CGFloat {
         switch state {
         case .purring: return 1.0 + CGFloat(sin(t * 3.0)) * 0.04
