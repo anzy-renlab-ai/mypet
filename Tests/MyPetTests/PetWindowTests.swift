@@ -61,7 +61,8 @@ final class PetWindowTests: XCTestCase {
     func test_init_isCompactSizeAtRest() {
         let w = PetWindow()
         XCTAssertEqual(w.frame.size, PetWindow.compactSize)
-        XCTAssertEqual(PetWindow.compactSize, NSSize(width: 100, height: 100))
+        XCTAssertEqual(PetWindow.compactSize, NSSize(width: 180, height: 180),
+            "Compact size must be wide enough to host the cat + cursor approach zone")
     }
 
     func test_setExpanded_growsToFitTipBubble() {

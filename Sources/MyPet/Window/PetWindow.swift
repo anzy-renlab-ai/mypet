@@ -3,10 +3,11 @@ import SwiftUI
 
 final class PetWindow: NSWindow, NSWindowDelegate {
 
-    /// Compact size — just the turtle. Used at rest.
-    static let compactSize = NSSize(width: 100, height: 100)
-    /// Expanded size — room for a tip bubble above the turtle.
-    static let expandedSize = NSSize(width: 340, height: 220)
+    /// Compact size — cat at center plus a comfortable "approach zone" that
+    /// catches the cursor + renders the following token coin.
+    static let compactSize = NSSize(width: 180, height: 180)
+    /// Expanded size — room for a tip bubble above the cat.
+    static let expandedSize = NSSize(width: 360, height: 260)
 
     /// Tests + no-arg construction.
     convenience init() {

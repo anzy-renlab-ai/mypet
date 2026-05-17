@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Cute desktop cat. Hover 1s to feed.
+/// Cute desktop cat. Move the mouse near it → a token coin follows the cursor.
+/// Double-click the cat to feed.
 ///
 /// Renders Apple's professionally-drawn cat emojis on top of a soft fluff
 /// halo. Per-state expression comes "for free" via emoji swap; surrounding
@@ -8,16 +9,15 @@ import SwiftUI
 ///
 /// Invariants preserved:
 /// - Zero CPU when fully idle (TimelineView gated by `needsAnimation`)
-/// - Hover uses `.task(id:)`, never `Timer`
+/// - Single-tap to drag, double-tap to feed; no Timer captured in closures
 struct TurtleView: View {
     let state: PetState
     let excited: Bool
     let onFeed: (() -> Void)?
 
-    @State private var hoverToken: UUID?
-    @State private var hoverStart: Date?
-
-    private let petDuration: TimeInterval = 1.0
+    /// Last known cursor position inside the pet window's coordinate space.
+    /// `nil` when cursor is outside the approach zone.
+    @State private var cursorPos: CGPoint?
 
     init(state: PetState, excited: Bool = false, onFeed: (() -> Void)? = nil) {
         self.state = state
@@ -25,9 +25,16 @@ struct TurtleView: View {
         self.onFeed = onFeed
     }
 
+    /// True when the cat needs the 60fps render loop. Includes:
+    ///  - cursor in the approach zone (token follower needs to animate)
+    ///  - any non-idle state
     private var needsAnimation: Bool {
-        hoverToken != nil || state != .idle
+        cursorPos != nil || state != .idle
     }
+
+    /// Approach-zone radius in points. Cursor inside this → spawn the
+    /// following token coin.
+    private let approachRadius: CGFloat = 80
 
     var body: some View {
         Group {
@@ -39,37 +46,27 @@ struct TurtleView: View {
                 content(at: Date())
             }
         }
-        .contentShape(Circle())
-        .frame(width: 80, height: 80)
-        .onHover { isHovering in
-            if isHovering {
-                hoverStart = Date()
-                hoverToken = UUID()
-            } else {
-                hoverStart = nil
-                hoverToken = nil
+        .contentShape(Rectangle())
+        .frame(width: 180, height: 180)
+        .onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active(let location):
+                // Only "near" the cat counts — quadratic distance check.
+                let cx: CGFloat = 90, cy: CGFloat = 110
+                let dx = location.x - cx, dy = location.y - cy
+                cursorPos = (dx * dx + dy * dy) <= (approachRadius * approachRadius)
+                    ? location : nil
+            case .ended:
+                cursorPos = nil
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: 3)
-                .onChanged { _ in
-                    hoverStart = nil
-                    hoverToken = nil
-                }
-        )
-        .task(id: hoverToken) {
-            guard hoverToken != nil else { return }
-            try? await Task.sleep(nanoseconds: UInt64(petDuration * 1_000_000_000))
-            if !Task.isCancelled {
-                onFeed?()
-                hoverStart = nil
-                hoverToken = nil
-            }
+        .onTapGesture(count: 2) {
+            onFeed?()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("小猫")
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("鼠标停留 1 秒喂它一口 token")
+        .accessibilityHint("双击喂它一口 token")
         .animation(.easeInOut(duration: 0.2), value: state)
     }
 
@@ -77,13 +74,13 @@ struct TurtleView: View {
     private func content(at date: Date) -> some View {
         let t = date.timeIntervalSinceReferenceDate
         let motion = bodyMotion(at: t)
-        let progress = hoverProgress(now: date)
 
         ZStack {
             if state == .eating || state == .excited {
                 ParticleField(at: t, state: state).allowsHitTesting(false)
             }
 
+            // Cat sits at a fixed point inside the approach zone (bottom-center-ish)
             VStack(spacing: 2) {
                 if let above = overlayAbove(at: t) {
                     Text(above)
@@ -93,25 +90,25 @@ struct TurtleView: View {
                 } else {
                     Spacer().frame(height: 16)
                 }
-
-                CuteCatFace(state: state, t: t, hoverProgress: progress)
-                    .frame(width: 60, height: 60)
+                Spacer(minLength: 0)
+                CuteCatFace(state: state, t: t)
+                    .frame(width: 80, height: 80)
                     .scaleEffect(motion.scale, anchor: .bottom)
                     .rotationEffect(.degrees(motion.tilt), anchor: .bottom)
                     .offset(x: motion.sway, y: motion.bounce)
+                Spacer().frame(height: 12)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if progress > 0 {
-                    ProgressRing(progress: progress).frame(width: 22, height: 6)
-                } else {
-                    Spacer().frame(height: 6)
-                }
+            // Cursor-following token coin (only when cursor is in the zone)
+            if let pos = cursorPos {
+                FollowingToken(t: t)
+                    .position(x: pos.x, y: pos.y)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
             }
         }
-    }
-
-    private func hoverProgress(now: Date) -> Double {
-        guard let start = hoverStart else { return 0 }
-        return min(1.0, now.timeIntervalSince(start) / petDuration)
+        .animation(.easeOut(duration: 0.18), value: cursorPos == nil)
     }
 
     private func bodyMotion(at t: TimeInterval) -> (sway: CGFloat, bounce: CGFloat, scale: CGFloat, tilt: Double) {
@@ -176,6 +173,11 @@ struct CuteCatFace: View {
     /// 0–1, pulses halo intensity while user is hovering to feed.
     var hoverProgress: Double = 0
 
+    /// Picked sprite for the current state. nil → emoji fallback.
+    /// Re-rolled each time `state` changes (via `.task(id: state)`) so
+    /// multi-variant packs (cat-idle-1.png, cat-idle-2.png, ...) feel alive.
+    @State private var currentSprite: NSImage?
+
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
@@ -190,7 +192,7 @@ struct CuteCatFace: View {
                     .blur(radius: s * 0.04)
 
                 // The cat — prefer a bundled sprite, fall back to emoji
-                if let sprite = stateImage {
+                if let sprite = currentSprite {
                     Image(nsImage: sprite)
                         .resizable()
                         .interpolation(.high)
@@ -204,26 +206,60 @@ struct CuteCatFace: View {
                 }
             }
         }
+        .task(id: state) {
+            let variants = Self.allSprites(for: state)
+            currentSprite = variants.randomElement()
+            // If 2+ variants exist for this state, cross-fade through them
+            // every ~4s while the state stays the same. .task cancellation
+            // on state change makes this clean.
+            guard variants.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                if Task.isCancelled { break }
+                let next = variants.filter { $0 !== currentSprite }.randomElement() ?? variants.randomElement()
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.55)) {
+                        currentSprite = next
+                    }
+                }
+            }
+        }
     }
 
-    /// Sprite for the current state. Returns nil if no PNG bundled —
-    /// caller then renders the emoji fallback. PNGs go in
-    /// `Sources/MyPet/Resources/sprites/cat-<state>.png`.
-    /// Lookup is by name + extension via `Bundle.module`.
-    private var stateImage: NSImage? {
-        let name: String
+    /// All sprite variants for the state from the bundle. Supports
+    /// multi-variant packs: `cat-idle.png` + `cat-idle-2.png` ... `cat-idle-9.png`
+    /// are all eligible. Returns empty if no PNGs bundled — caller then
+    /// renders the emoji fallback.
+    static func allSprites(for state: PetState) -> [NSImage] {
+        let base = "cat-\(stateSlug(state))"
+        var images: [NSImage] = []
+        if let url = Bundle.module.url(forResource: base, withExtension: "png"),
+           let img = NSImage(contentsOf: url) {
+            images.append(img)
+        }
+        for i in 2...9 {
+            if let url = Bundle.module.url(forResource: "\(base)-\(i)", withExtension: "png"),
+               let img = NSImage(contentsOf: url) {
+                images.append(img)
+            }
+        }
+        return images
+    }
+
+    /// Random first pick (kept as a convenience).
+    static func pickSprite(for state: PetState) -> NSImage? {
+        allSprites(for: state).randomElement()
+    }
+
+    private static func stateSlug(_ state: PetState) -> String {
         switch state {
-        case .idle: name = "cat-idle"
-        case .eating: name = "cat-eating"
-        case .excited: name = "cat-excited"
-        case .purring: name = "cat-purring"
-        case .sleepy: name = "cat-sleepy"
-        case .hungry: name = "cat-hungry"
+        case .idle: return "idle"
+        case .eating: return "eating"
+        case .excited: return "excited"
+        case .purring: return "purring"
+        case .sleepy: return "sleepy"
+        case .hungry: return "hungry"
         }
-        guard let url = Bundle.module.url(forResource: name, withExtension: "png") else {
-            return nil
-        }
-        return NSImage(contentsOf: url)
     }
 
     /// Hover intensifies the halo from baseline (0.40) up to (0.70).
@@ -274,29 +310,26 @@ struct CuteCatFace: View {
     }
 }
 
-// MARK: - Progress ring (hover-to-feed feedback)
+// MARK: - Following token coin
 
-/// A slim progress bar inside a pill — replaces the old 5-dot row, reads
-/// clearer at small sizes and pulses when filling.
-private struct ProgressRing: View {
-    let progress: Double
-
+/// A coin that lazily trails the cursor when it's near the cat. Gentle bob
+/// + faint glow makes it feel alive. `t` drives the wobble so we don't own
+/// a separate clock.
+private struct FollowingToken: View {
+    let t: TimeInterval
     var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.black.opacity(0.15))
-                Capsule()
-                    .fill(LinearGradient(
-                        colors: [Color(red: 1.00, green: 0.72, blue: 0.30),
-                                 Color(red: 1.00, green: 0.48, blue: 0.55)],
-                        startPoint: .leading, endPoint: .trailing))
-                    .frame(width: w * CGFloat(progress))
-                    .shadow(color: Color(red: 1.0, green: 0.55, blue: 0.40).opacity(0.6 * progress),
-                            radius: 3)
-            }
-            .frame(width: w, height: h)
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [
+                    Color(red: 1.00, green: 0.80, blue: 0.30).opacity(0.5),
+                    Color(red: 1.00, green: 0.80, blue: 0.30).opacity(0)
+                ], center: .center, startRadius: 4, endRadius: 18))
+                .frame(width: 36, height: 36)
+                .blur(radius: 1.5)
+            Text("🪙")
+                .font(.system(size: 18))
+                .scaleEffect(1.0 + CGFloat(sin(t * 3.0)) * 0.05)
+                .offset(y: CGFloat(sin(t * 2.4)) * 1.5)
         }
     }
 }
