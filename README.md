@@ -2,7 +2,7 @@
 
 > A fluffy desktop cat that eats your Claude Code tokens.
 >
-> Move your mouse near the cat — a 🪙 coin follows your cursor. **Double-click**
+> Move your mouse near the cat — a wobbly little Claude-cookie follows your cursor. **Double-click**
 > the cat to feed it. It chomps one `claude -p` call and bubbles back a Claude
 > Code tip, a prompt to try, a 打油诗 (Chinese quatrain), or a tech-news headline.
 > Then goes back to sleep.
@@ -34,7 +34,7 @@ It's a screensaver that pays rent.
                                            click bubble copies tip + dismisses  ◄──┘
 ```
 
-1. Move mouse close to the cat — a 🪙 coin follows your cursor.
+1. Move mouse close to the cat — a wobbly little cookie follows your cursor.
 2. **Double-click** the cat to trigger a feed.
 3. Cat plays a chomp animation; lightning + fish particles fly up; halo glows.
 4. `mypet` shells out to your local `claude` CLI — same login, same quota.

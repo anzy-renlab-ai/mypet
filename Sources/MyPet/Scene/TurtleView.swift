@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Cute desktop cat. Move the mouse near it → a token coin follows the cursor.
+/// Cute desktop cat. Move the mouse near it → a token cookie follows the cursor.
 /// Double-click the cat to feed.
 ///
 /// Renders Apple's professionally-drawn cat emojis on top of a soft fluff
@@ -26,7 +26,7 @@ struct TurtleView: View {
     }
 
     /// Approach-zone radius in points. Cursor inside this → spawn the
-    /// following token coin.
+    /// following token cookie.
     private let approachRadius: CGFloat = 80
 
     var body: some View {
@@ -78,15 +78,38 @@ struct TurtleView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Cursor-following token coin (only when cursor is in the zone)
-            if let pos = cursorPos {
+            // Cursor-following token cookie. Only shows during "resting"
+            // states where feeding is a meaningful next action. Hidden during
+            // the active feed cycle (eating → excited → purring) because the
+            // cookie was just "eaten" — having it still floating around would
+            // contradict the chomp animation.
+            if let pos = cursorPos, cookieAllowed {
                 FollowingToken(t: t)
                     .position(x: pos.x, y: pos.y)
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
         }
-        .animation(.easeOut(duration: 0.18), value: cursorPos == nil)
+        .animation(.easeOut(duration: 0.18), value: cookieVisibilityKey)
+    }
+
+    /// Whether the cursor-following cookie may render given the current state.
+    /// Restful / sleep / mood states allow it (user can feed any time). The
+    /// active feed cycle hides it.
+    private var cookieAllowed: Bool {
+        switch state {
+        case .eating, .excited, .purring:
+            return false
+        case .idle, .sleepy, .hungry, .yawning, .dozing, .sleeping:
+            return true
+        }
+    }
+
+    /// Combined animation key — re-evaluates whenever cursor presence OR
+    /// state-driven allowance changes, so SwiftUI animates the fade-out
+    /// when feed starts (state flips before cursor leaves).
+    private var cookieVisibilityKey: Bool {
+        cursorPos == nil || !cookieAllowed
     }
 }
 
@@ -120,6 +143,13 @@ struct CuteCatFace: View {
                 .id(state)
         }
         .animation(.easeInOut(duration: 0.35), value: state)
+        // Play the matching m4a once on state change (no-op if no audio shipped).
+        .onChange(of: state) { newState in
+            CatAudio.shared.playIfChanged(stateKey: newState.rawValue)
+        }
+        .onAppear {
+            CatAudio.shared.playIfChanged(stateKey: state.rawValue)
+        }
     }
 
     /// Procedural micro-motion: breath + tilt + bob. Tuned subtle —
@@ -156,26 +186,51 @@ struct CuteCatFace: View {
 
 }
 
-// MARK: - Following token coin
+// MARK: - Following token cookie
 
-/// A coin that lazily trails the cursor when it's near the cat. Gentle bob
-/// + faint glow makes it feel alive. `t` drives the wobble so we don't own
+/// A claude-shaped cookie that lazily trails the cursor when it's near the
+/// cat. Gentle bob + soft warm halo. `t` drives the wobble so we don't own
 /// a separate clock.
 private struct FollowingToken: View {
     let t: TimeInterval
+
+    private static let cookieImage: NSImage? = {
+        if let url = Bundle.module.url(forResource: "cookie", withExtension: "png"),
+           let img = NSImage(contentsOf: url) {
+            FileHandle.standardError.write("[cookie] loaded \(url.lastPathComponent) \(img.size)\n".data(using: .utf8)!)
+            return img
+        }
+        FileHandle.standardError.write("[cookie] FAILED to load cookie.png from Bundle.module\n".data(using: .utf8)!)
+        return nil
+    }()
+
     var body: some View {
         ZStack {
             Circle()
                 .fill(RadialGradient(colors: [
-                    Color(red: 1.00, green: 0.80, blue: 0.30).opacity(0.5),
-                    Color(red: 1.00, green: 0.80, blue: 0.30).opacity(0)
-                ], center: .center, startRadius: 4, endRadius: 18))
-                .frame(width: 36, height: 36)
+                    Color(red: 0.88, green: 0.55, blue: 0.36).opacity(0.45),
+                    Color(red: 0.88, green: 0.55, blue: 0.36).opacity(0)
+                ], center: .center, startRadius: 6, endRadius: 24))
+                .frame(width: 30, height: 30)
                 .blur(radius: 1.5)
-            Text("🪙")
-                .font(.system(size: 18))
-                .scaleEffect(1.0 + CGFloat(sin(t * 3.0)) * 0.05)
-                .offset(y: CGFloat(sin(t * 2.4)) * 1.5)
+
+            Group {
+                if let img = Self.cookieImage {
+                    Image(nsImage: img)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                } else {
+                    Text("🍪").font(.system(size: 16))
+                }
+            }
+            .frame(width: 22, height: 22)
+            .rotationEffect(.degrees(sin(t * 2.6) * 9 + sin(t * 1.1) * 3))
+            .scaleEffect(1.0 + CGFloat(sin(t * 3.0)) * 0.04)
+            .offset(
+                x: CGFloat(sin(t * 1.7)) * 1.5,
+                y: CGFloat(sin(t * 2.4)) * 2.5
+            )
         }
     }
 }

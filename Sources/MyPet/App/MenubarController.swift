@@ -32,17 +32,35 @@ final class MenubarController: NSObject {
     private func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            if let img = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "mypet") {
-                img.isTemplate = true
-                button.image = img
-            } else {
-                button.title = "🐾"
-            }
+            button.image = Self.twoPawsTemplateImage()
             button.toolTip = "mypet"
         }
         item.menu = buildMenu()
         statusItem = item
         log.info("menubar installed")
+    }
+
+    /// Rasterize the 🐾 emoji into a template image. macOS uses the alpha
+    /// channel as the silhouette mask, so we keep the emoji's cute two-paw
+    /// shape AND get proper menubar tinting (white in dark mode, black in
+    /// light mode — no more sore-thumb black-on-blue).
+    private static func twoPawsTemplateImage() -> NSImage {
+        let fontSize: CGFloat = 14
+        let attr = NSAttributedString(
+            string: "🐾",
+            attributes: [.font: NSFont.systemFont(ofSize: fontSize)]
+        )
+        let glyphSize = attr.size()
+        let pad: CGFloat = 2
+        let size = NSSize(width: ceil(glyphSize.width) + pad * 2,
+                          height: ceil(glyphSize.height))
+
+        let img = NSImage(size: size)
+        img.lockFocus()
+        attr.draw(at: NSPoint(x: pad, y: 0))
+        img.unlockFocus()
+        img.isTemplate = true
+        return img
     }
 
     private func buildMenu() -> NSMenu {

@@ -20,6 +20,9 @@ struct AnimatedCatView: NSViewRepresentable {
         v.imageScaling = .scaleProportionallyUpOrDown
         v.imageAlignment = .alignCenter
         v.animates = true
+        v.imageFrameStyle = .none
+        v.translatesAutoresizingMaskIntoConstraints = true
+        v.autoresizingMask = [.width, .height]
         v.image = loadImage()
         return v
     }
@@ -45,14 +48,14 @@ struct AnimatedCatView: NSViewRepresentable {
     /// Try APNG first, fall back to PNG so we ship something during
     /// the asset migration period.
     private func loadImage() -> NSImage? {
-        if let url = Bundle.module.url(forResource: resourceName, withExtension: "apng"),
-           let img = NSImage(contentsOf: url) {
-            return img
-        }
-        if let url = Bundle.module.url(forResource: resourceName, withExtension: "png"),
-           let img = NSImage(contentsOf: url) {
-            return img
-        }
-        return nil
+        let url: URL? = Bundle.module.url(forResource: resourceName, withExtension: "apng")
+            ?? Bundle.module.url(forResource: resourceName, withExtension: "png")
+        guard let u = url, let img = NSImage(contentsOf: u) else { return nil }
+        // Override the image's intrinsic size so NSImageView's
+        // proportional scaling lays it out within whatever bounds
+        // SwiftUI's .frame() assigns. Without this, the APNG's native
+        // pixel size (512+) leaks through and the cat overflows.
+        img.size = NSSize(width: 96, height: 96)
+        return img
     }
 }

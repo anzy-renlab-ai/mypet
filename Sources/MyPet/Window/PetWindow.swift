@@ -4,7 +4,7 @@ import SwiftUI
 final class PetWindow: NSWindow, NSWindowDelegate {
 
     /// Compact size — cat at center plus a comfortable "approach zone" that
-    /// catches the cursor + renders the following token coin.
+    /// catches the cursor + renders the following token cookie.
     static let compactSize = NSSize(width: 180, height: 180)
     /// Expanded size — room for a tip bubble above the cat.
     static let expandedSize = NSSize(width: 400, height: 360)

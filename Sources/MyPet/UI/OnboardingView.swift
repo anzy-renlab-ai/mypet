@@ -219,7 +219,7 @@ struct OnboardingView: View {
             Text("搞定")
                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
                 .foregroundColor(textPrimary)
-            Text("小猫住在右下角了。\n鼠标靠近会出现一枚 🪙 跟着，\n双击小猫就喂它一口；菜单栏 🐾 → Feed now 同样可以。")
+            Text("小猫住在右下角了。\n鼠标靠近会有一块小饼干跟着晃悠，\n双击小猫就喂它一口；菜单栏 🐾 → Feed now 同样可以。")
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(textSecondary)
                 .multilineTextAlignment(.center)
