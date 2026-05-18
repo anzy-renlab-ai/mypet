@@ -23,28 +23,37 @@ struct CatTheme: Codable {
         let to: String
     }
 
-    /// Default mypet theme — six base states + sleep progression.
+    /// Default mypet theme — every visual state maps to its bundled APNG.
+    /// peekLeft/peekRight share the peekRight asset (peekLeft is rendered
+    /// by horizontally mirroring peekRight at render time, not by a
+    /// separate generation).
     static let `default` = CatTheme(
         schemaVersion: 1,
         name: "mypet",
         author: "mypet",
         states: [
-            "idle": "cat-idle",
-            "eating": "cat-eating",
-            "excited": "cat-excited",
-            "purring": "cat-purring",
-            "sleepy": "cat-sleepy",
-            "hungry": "cat-hungry",
-            "yawning": "cat-yawning",
-            "dozing": "cat-dozing",
-            "sleeping": "cat-sleeping",
+            "idle":      "cat-idle",
+            "eating":    "cat-eating",
+            "excited":   "cat-excited",
+            "purring":   "cat-purring",
+            "hungry":    "cat-hungry",
+            "sleepy":    "cat-sleepy",
+            "dozing":    "cat-dozing",
+            "sleeping":  "cat-sleeping",
+            "clingTop":  "cat-clingTop",
+            "peekRight": "cat-peekRight",
+            "peekLeft":  "cat-peekRight",  // mirrored at render time
+            "petting":   "cat-petting",
+            "licking":   "cat-licking",
+            "washing":   "cat-washing",
         ],
         transitions: [
-            // Sleep sequence (borrowed concept): each step delays a bit
-            // longer before deepening sleep. Wakes on any interaction.
-            Transition(from: "idle", after: 30, to: "yawning"),
-            Transition(from: "yawning", after: 8, to: "dozing"),
-            Transition(from: "dozing", after: 15, to: "sleeping"),
+            // Sleep progression. Each step waits the listed seconds *after
+            // entering the previous state* before deepening. Cumulative
+            // walltime from idle: 5min → 15min → 30min.
+            Transition(from: "idle",   after: 5 * 60,  to: "sleepy"),
+            Transition(from: "sleepy", after: 10 * 60, to: "dozing"),
+            Transition(from: "dozing", after: 15 * 60, to: "sleeping"),
         ]
     )
 

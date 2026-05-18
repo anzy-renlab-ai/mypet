@@ -82,6 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         mouseMonitor = monitor
 
+        // Edge proximity (window near top/left/right) → spatial state.
+        window.onEdgeState = { [weak self] edge in
+            self?.coordinator.setEdgeState(edge)
+        }
+
         let host = NSHostingView(rootView: PetRootView(coordinator: coordinator, mouseMonitor: monitor))
         host.autoresizingMask = [.width, .height]
         host.frame = NSRect(origin: .zero, size: PetWindow.compactSize)
@@ -144,6 +149,16 @@ struct PetRootView: View {
     @ObservedObject var coordinator: FeedCoordinator
     @ObservedObject var mouseMonitor: MouseMonitor
 
+    /// True when the cursor is currently over the drawn cat area. Bottom-
+    /// right of the compact window, approximate hit-test radius.
+    private var cursorOverCat: Bool {
+        guard let p = mouseMonitor.cursorPos else { return false }
+        // Cat center inside the 180×180 window content coords (y-up).
+        let cx: CGFloat = 130, cy: CGFloat = 50
+        let dx = p.x - cx, dy = p.y - cy
+        return dx * dx + dy * dy <= 50 * 50
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             if let tip = coordinator.tip {
@@ -169,6 +184,17 @@ struct PetRootView: View {
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: coordinator.tip)
+        // Hover ≥1s over the cat → petting state. Leaving immediately exits.
+        // The .task auto-cancels on id change, so dwell timing is precise.
+        .task(id: cursorOverCat) {
+            if cursorOverCat {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else { return }
+                coordinator.setPetting(true)
+            } else {
+                coordinator.setPetting(false)
+            }
+        }
     }
 
     /// Tokens chip mirrors the badge gating: only show when a real LLM tip

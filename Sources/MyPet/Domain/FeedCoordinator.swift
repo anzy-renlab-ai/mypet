@@ -218,6 +218,45 @@ final class FeedCoordinator: ObservableObject {
         state = machine.state
     }
 
+    // MARK: - Spatial interaction
+
+    /// Window moved near a screen edge. Sets clingTop / peekLeft / peekRight
+    /// when appropriate (no-op during the active feed cycle).
+    func setEdgeState(_ edge: PetState?) {
+        if let edge {
+            machine.enterEdge(edge)
+        } else {
+            machine.leaveEdge()
+        }
+        state = machine.state
+    }
+
+    // MARK: - Engagement
+
+    /// Hover lingered ≥1s on the cat → enter petting (no-op from feed cycle
+    /// or edge states). Pass `false` when cursor leaves to restore idle.
+    func setPetting(_ active: Bool) {
+        if active {
+            machine.enterPetting()
+        } else {
+            machine.leavePetting()
+        }
+        state = machine.state
+    }
+
+    // MARK: - Personality moments
+
+    /// Spontaneous grooming. Caller already rate-limited + "user-recently-active" gated.
+    func triggerGrooming(_ kind: PetState) {
+        machine.enterGrooming(kind)
+        state = machine.state
+    }
+
+    func groomingDidFinish() {
+        machine.groomingDidFinish()
+        state = machine.state
+    }
+
     // MARK: - Private
 
     private func handleSuccess(_ success: FeedSuccess) async {

@@ -89,9 +89,11 @@ struct TurtleView: View {
     /// active feed cycle hides it.
     private var cookieAllowed: Bool {
         switch state {
-        case .eating, .excited, .purring:
+        case .eating, .excited, .purring,
+             .clingTop, .peekLeft, .peekRight,
+             .petting, .licking, .washing:
             return false
-        case .idle, .sleepy, .hungry, .yawning, .dozing, .sleeping:
+        case .idle, .sleepy, .hungry, .dozing, .sleeping:
             return true
         }
     }
@@ -127,7 +129,10 @@ struct CuteCatFace: View {
                 // Subtle realistic ground shadow only — no halo / glow.
                 .shadow(color: .black.opacity(0.22),
                         radius: s * 0.06, x: 0, y: s * 0.04)
-                .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
+                // peekLeft shares the peekRight asset — mirror it horizontally.
+                .scaleEffect(x: m.sx * (state == .peekLeft ? -1 : 1),
+                             y: m.sy,
+                             anchor: .bottom)
                 .rotationEffect(.degrees(m.tilt), anchor: .bottom)
                 .offset(x: m.dx, y: m.dy)
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
@@ -167,11 +172,24 @@ struct CuteCatFace: View {
         case .sleeping:
             let snore = CGFloat(sin(t * 0.5)) * 0.015
             return (1.0 + snore, 1.0 - snore * 0.4, -4, 0, 0)
-        case .yawning:
-            let yawn = CGFloat(sin(t * 1.8)) * 0.020
-            return (1.0 + yawn, 1.0 - yawn * 0.6, sin(t * 0.6) * 0.8, 0, 0)
         case .hungry:
             return (1.0, 1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
+        case .clingTop:
+            // Body sway like a hanging weight.
+            let sway = CGFloat(sin(t * 1.4)) * 0.025
+            return (1.0 + sway, 1.0 - sway * 0.4, sin(t * 1.4) * 6, 0, 0)
+        case .peekLeft, .peekRight:
+            // Curious head bob, no body translation.
+            return (1.0, 1.0, sin(t * 1.1) * 1.2, 0, 0)
+        case .petting:
+            // Tilt-relaxed bliss.
+            let purr = CGFloat(sin(t * 2.0)) * 0.012
+            return (1.0 + purr, 1.0 - purr * 0.5, sin(t * 0.7) * 1.0 + 4, 0, 0)
+        case .licking, .washing:
+            // Focused grooming — minimal body motion, the asset itself does
+            // the head/paw choreography.
+            let breath = CGFloat(sin(t * 1.0)) * 0.008
+            return (1.0 + breath, 1.0 - breath * 0.5, 0, 0, 0)
         }
     }
 

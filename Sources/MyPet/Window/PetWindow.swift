@@ -64,10 +64,20 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     var snapThreshold: CGFloat = 60
     /// Margin from the edge after snapping — keeps the cat from sitting flush.
     var snapMargin: CGFloat = 24
+    /// Within this many points of a screen edge → fire `onEdgeState` with the
+    /// matching state (clingTop / peekLeft / peekRight). Beyond it → nil.
+    var edgeStateThreshold: CGFloat = 32
+
+    /// Callback fired when the window enters or leaves an edge-state zone.
+    /// `nil` means the window is no longer near any edge.
+    /// Wired in AppDelegate to `coordinator.setEdgeState(_:)`.
+    var onEdgeState: ((PetState?) -> Void)?
 
     /// Timer that fires once the user stops moving the window. windowDidMove
     /// keeps resetting it during a drag; on rest, we snap to the nearest edge.
     private var snapDebounce: Timer?
+    /// Last published edge state — debounces redundant callbacks.
+    private var lastEdgeState: PetState??
 
     deinit {
         snapDebounce?.invalidate()
@@ -75,9 +85,41 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
+        // Edge-state evaluation runs on every move tick — cheap and gives
+        // immediate visual feedback as the user drags toward an edge.
+        evaluateEdgeState()
+
         snapDebounce?.invalidate()
         snapDebounce = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: false) { [weak self] _ in
             DispatchQueue.main.async { self?.snapToNearestEdgeIfClose() }
+        }
+    }
+
+    /// Inspect distance to each screen edge and notify a state transition
+    /// when within `edgeStateThreshold`. Top edge → clingTop; left/right →
+    /// peekLeft/peekRight. Bottom edge is ignored (cat lives there anyway).
+    private func evaluateEdgeState() {
+        guard let screen = self.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let distLeft  = frame.minX - visible.minX
+        let distRight = visible.maxX - frame.maxX
+        let distTop   = visible.maxY - frame.maxY
+
+        let edge: PetState?
+        if distTop < edgeStateThreshold {
+            edge = .clingTop
+        } else if distLeft < edgeStateThreshold {
+            edge = .peekLeft
+        } else if distRight < edgeStateThreshold {
+            edge = .peekRight
+        } else {
+            edge = nil
+        }
+
+        // Debounce — only fire on actual change.
+        if lastEdgeState == nil || lastEdgeState! != edge {
+            lastEdgeState = edge
+            onEdgeState?(edge)
         }
     }
 
