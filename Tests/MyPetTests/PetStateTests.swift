@@ -137,4 +137,85 @@ final class PetStateTests: XCTestCase {
         m.wake()
         XCTAssertEqual(m.state, .eating, "Wake should not interrupt active feed")
     }
+
+    // MARK: - Edge states
+
+    func test_enterEdge_fromIdle_setsClingTop() {
+        var m = PetStateMachine()
+        XCTAssertTrue(m.enterEdge(.clingTop))
+        XCTAssertEqual(m.state, .clingTop)
+    }
+
+    func test_enterEdge_doesNotOverrideFeedCycle() {
+        var m = PetStateMachine()
+        m.startFeed()
+        XCTAssertFalse(m.enterEdge(.peekRight), "Edge state must not interrupt eating")
+        XCTAssertEqual(m.state, .eating)
+    }
+
+    func test_leaveEdge_returnsToIdle() {
+        var m = PetStateMachine()
+        m.enterEdge(.peekLeft)
+        XCTAssertEqual(m.state, .peekLeft)
+        m.leaveEdge()
+        XCTAssertEqual(m.state, .idle)
+    }
+
+    func test_enterEdge_rejectsNonEdgeStates() {
+        var m = PetStateMachine()
+        XCTAssertFalse(m.enterEdge(.eating))
+        XCTAssertEqual(m.state, .idle, "Non-edge states must not be allowed via enterEdge")
+    }
+
+    // MARK: - Petting
+
+    func test_enterPetting_fromIdle_setsPetting() {
+        var m = PetStateMachine()
+        XCTAssertTrue(m.enterPetting())
+        XCTAssertEqual(m.state, .petting)
+    }
+
+    func test_enterPetting_blockedDuringFeedCycle() {
+        var m = PetStateMachine()
+        m.startFeed()
+        XCTAssertFalse(m.enterPetting())
+        XCTAssertEqual(m.state, .eating)
+    }
+
+    func test_leavePetting_returnsToIdle() {
+        var m = PetStateMachine()
+        m.enterPetting()
+        m.leavePetting()
+        XCTAssertEqual(m.state, .idle)
+    }
+
+    // MARK: - Grooming
+
+    func test_enterGrooming_licking_fromIdle() {
+        var m = PetStateMachine()
+        XCTAssertTrue(m.enterGrooming(.licking))
+        XCTAssertEqual(m.state, .licking)
+    }
+
+    func test_enterGrooming_blockedFromSleepy() {
+        var m = PetStateMachine(sleepyAfter: 1, hungryAfter: 24 * 3600)
+        m.evaluateIdleTransitions(now: Date().addingTimeInterval(10))
+        XCTAssertEqual(m.state, .sleepy)
+        XCTAssertFalse(m.enterGrooming(.washing), "Grooming only from idle, not sleepy")
+        XCTAssertEqual(m.state, .sleepy)
+    }
+
+    func test_enterGrooming_rejectsNonGroomingStates() {
+        var m = PetStateMachine()
+        XCTAssertFalse(m.enterGrooming(.idle))
+        XCTAssertFalse(m.enterGrooming(.eating))
+        XCTAssertEqual(m.state, .idle)
+    }
+
+    func test_groomingDidFinish_returnsToIdle() {
+        var m = PetStateMachine()
+        m.enterGrooming(.washing)
+        m.groomingDidFinish()
+        XCTAssertEqual(m.state, .idle)
+    }
 }
