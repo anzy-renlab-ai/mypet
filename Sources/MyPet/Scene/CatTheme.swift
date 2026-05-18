@@ -27,6 +27,10 @@ struct CatTheme: Codable {
     /// peekLeft/peekRight share the peekRight asset (peekLeft is rendered
     /// by horizontally mirroring peekRight at render time, not by a
     /// separate generation).
+    ///
+    /// Placeholders: `petting` / `licking` / `washing` reuse existing close
+    /// assets until their own APNGs are generated — petting borrows purring
+    /// (same eyes-closed bliss), grooming falls back to idle.
     static let `default` = CatTheme(
         schemaVersion: 1,
         name: "mypet",
@@ -43,9 +47,9 @@ struct CatTheme: Codable {
             "clingTop":  "cat-clingTop",
             "peekRight": "cat-peekRight",
             "peekLeft":  "cat-peekRight",  // mirrored at render time
-            "petting":   "cat-petting",
-            "licking":   "cat-licking",
-            "washing":   "cat-washing",
+            "petting":   "cat-purring",    // placeholder until generated
+            "licking":   "cat-idle",       // placeholder
+            "washing":   "cat-idle",       // placeholder
         ],
         transitions: [
             // Sleep progression. Each step waits the listed seconds *after
