@@ -45,11 +45,12 @@ final class PetWindowTests: XCTestCase {
         XCTAssertTrue(w.collectionBehavior.contains(.fullScreenAuxiliary))
     }
 
-    func test_init_doesNotSetIgnoresMouseEvents() {
-        // Critical: relying on macOS default per-pixel hit testing
-        // for borderless transparent windows. See D13 / pet-therapy reference.
+    func test_init_setsIgnoresMouseEventsTrue() {
+        // Click-through window — single clicks pass through to whatever app
+        // is behind mypet so the cat never blocks the user's work. Feed is
+        // triggered by `MouseMonitor` watching a global double-click.
         let w = PetWindow()
-        XCTAssertFalse(w.ignoresMouseEvents, "Must not block clicks on opaque pixels")
+        XCTAssertTrue(w.ignoresMouseEvents, "Window must be click-through")
     }
 
     func test_init_isReleasedWhenClosedFalse() {
@@ -84,10 +85,11 @@ final class PetWindowTests: XCTestCase {
         XCTAssertEqual(w.frame.size, PetWindow.compactSize)
     }
 
-    func test_isMovableByWindowBackground_isTrue() {
-        // Desktop pet should be draggable.
+    func test_ignoresMouseEvents_isTrue() {
+        // Click-through window — single clicks pass to the app behind, only
+        // a global double-click detector fires feed (see MouseMonitor).
         let w = PetWindow()
-        XCTAssertTrue(w.isMovableByWindowBackground)
+        XCTAssertTrue(w.ignoresMouseEvents)
     }
 
     // MARK: - Snap to edge

@@ -13,21 +13,28 @@ import SwiftUI
 struct TurtleView: View {
     let state: PetState
     let excited: Bool
-    let onFeed: (() -> Void)?
+    /// Cursor position in the window's content coords, supplied by the
+    /// app-level `MouseMonitor` (since the window is click-through and can't
+    /// receive hover events itself). `nil` when cursor is outside the window.
+    let cursorPos: CGPoint?
 
-    /// Last known cursor position inside the pet window's coordinate space.
-    /// `nil` when cursor is outside the approach zone.
-    @State private var cursorPos: CGPoint?
-
-    init(state: PetState, excited: Bool = false, onFeed: (() -> Void)? = nil) {
+    init(state: PetState, excited: Bool = false, cursorPos: CGPoint? = nil) {
         self.state = state
         self.excited = excited
-        self.onFeed = onFeed
+        self.cursorPos = cursorPos
     }
 
-    /// Approach-zone radius in points. Cursor inside this → spawn the
-    /// following token cookie.
+    /// Approach-zone radius in points. Cursor inside this → cookie shows.
     private let approachRadius: CGFloat = 80
+
+    /// True when the externally-provided cursor is near enough to the cat
+    /// to merit drawing the following cookie.
+    private var cursorInZone: Bool {
+        guard let p = cursorPos else { return false }
+        let cx: CGFloat = 90, cy: CGFloat = 110
+        let dx = p.x - cx, dy = p.y - cy
+        return dx * dx + dy * dy <= approachRadius * approachRadius
+    }
 
     var body: some View {
         // Single TimelineView always running. .animation = 60fps; the cat
@@ -37,24 +44,8 @@ struct TurtleView: View {
         }
         .contentShape(Rectangle())
         .frame(width: 180, height: 180)
-        .onContinuousHover(coordinateSpace: .local) { phase in
-            switch phase {
-            case .active(let location):
-                // Only "near" the cat counts — quadratic distance check.
-                let cx: CGFloat = 90, cy: CGFloat = 110
-                let dx = location.x - cx, dy = location.y - cy
-                cursorPos = (dx * dx + dy * dy) <= (approachRadius * approachRadius)
-                    ? location : nil
-            case .ended:
-                cursorPos = nil
-            }
-        }
-        .onTapGesture(count: 2) {
-            onFeed?()
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("小猫")
-        .accessibilityAddTraits(.isButton)
         .accessibilityHint("双击喂它一口 token")
         .animation(.easeInOut(duration: 0.2), value: state)
     }
@@ -83,7 +74,7 @@ struct TurtleView: View {
             // the active feed cycle (eating → excited → purring) because the
             // cookie was just "eaten" — having it still floating around would
             // contradict the chomp animation.
-            if let pos = cursorPos, cookieAllowed {
+            if let pos = cursorPos, cursorInZone, cookieAllowed {
                 FollowingToken(t: t)
                     .position(x: pos.x, y: pos.y)
                     .transition(.opacity)
@@ -109,7 +100,7 @@ struct TurtleView: View {
     /// state-driven allowance changes, so SwiftUI animates the fade-out
     /// when feed starts (state flips before cursor leaves).
     private var cookieVisibilityKey: Bool {
-        cursorPos == nil || !cookieAllowed
+        !cursorInZone || !cookieAllowed
     }
 }
 

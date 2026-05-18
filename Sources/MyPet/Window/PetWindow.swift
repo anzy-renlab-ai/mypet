@@ -49,10 +49,11 @@ final class PetWindow: NSWindow, NSWindowDelegate {
         backgroundColor = .clear
         level = .statusBar
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        // Draggable: click-drag moves the cat. Plain hover (no click) still
-        // triggers the feed timer (handled in CuteCatFace's hover); a DragGesture
-        // there cancels the timer when an actual drag starts.
-        isMovableByWindowBackground = true
+        // Click-through window. Single clicks pass straight to the app behind
+        // so the cat never blocks the user's work. Double-click → feed is
+        // detected by `MouseMonitor` via a global event monitor. To reposition
+        // the cat, use the menubar 🐾 → Move submenu (no drag-to-move).
+        ignoresMouseEvents = true
         isReleasedWhenClosed = false
         delegate = self
     }

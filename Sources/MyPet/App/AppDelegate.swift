@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var coordinator: FeedCoordinator!
     private var feedLog: FeedLog!
     private var tipCancellable: AnyCancellable?
+    private var mouseMonitor: MouseMonitor?
 
     private var hasShownOnboarding: Bool {
         get { UserDefaults.standard.bool(forKey: "mypet.onboarding.shown") }
@@ -66,8 +67,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func installPetWindow() {
-        let window = PetWindow(rootView: AnyView(petRoot()))
+        // Create the window first (empty contentView), then build the
+        // MouseMonitor against it, then install the SwiftUI root view that
+        // references the monitor. This avoids a chicken-and-egg between
+        // monitor.init(window:) and the view that needs the monitor.
+        let window = PetWindow()
         window.placeBottomRight()
+
+        let monitor = MouseMonitor(window: window)
+        monitor.onDoubleClick = { [weak self] in
+            Task { @MainActor [weak self] in
+                await self?.coordinator.feed()
+            }
+        }
+        mouseMonitor = monitor
+
+        let host = NSHostingView(rootView: PetRootView(coordinator: coordinator, mouseMonitor: monitor))
+        host.autoresizingMask = [.width, .height]
+        host.frame = NSRect(origin: .zero, size: PetWindow.compactSize)
+        window.contentView = host
         window.makeKeyAndOrderFront(nil)
         petWindow = window
 
@@ -79,10 +97,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             w.setExpanded(tip != nil, animate: true)
             w.placeBottomRight()
         }
-    }
-
-    private func petRoot() -> some View {
-        PetRootView(coordinator: coordinator)
     }
 
     private func showOnboarding() {
@@ -123,11 +137,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// Hover the turtle 1s to feed. Fills the window, which resizes between
-/// compact and expanded as a tip bubble shows/hides (handled in AppDelegate).
+/// Click-through window root. Cursor and feed events arrive via the global
+/// `MouseMonitor` (the window itself has `ignoresMouseEvents = true`).
 @MainActor
 struct PetRootView: View {
     @ObservedObject var coordinator: FeedCoordinator
+    @ObservedObject var mouseMonitor: MouseMonitor
 
     var body: some View {
         VStack(spacing: 4) {
@@ -147,7 +162,7 @@ struct PetRootView: View {
                 TurtleView(
                     state: coordinator.state,
                     excited: coordinator.excited,
-                    onFeed: { Task { await coordinator.feed() } }
+                    cursorPos: mouseMonitor.cursorPos
                 )
             }
         }
