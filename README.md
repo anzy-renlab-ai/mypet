@@ -128,5 +128,16 @@ single-in-flight feed, etc.).
 
 ## License
 
-MIT. Built for Claude Code users who wanted something cute on their desktop.
-PRs welcome — especially new tip prompts and seasonal cat skins.
+Dual-tracked:
+
+- **Source code** ([LICENSE](LICENSE)) — MIT. Fork it, ship it, sell it.
+- **Cat artwork & audio** ([Sources/MyPet/Resources/sprites/LICENSE](Sources/MyPet/Resources/sprites/LICENSE))
+  — All Rights Reserved. The fluffy kitten is © alvin. Personal use of
+  mypet is fine; re-packaging the cat in another product / training AI on
+  the sprites / commercial redistribution requires written permission.
+
+See [NOTICE.md](NOTICE.md) for the full attribution.
+
+PRs welcome on the code — especially new tip prompts. Skin contributions
+welcome but submitted skins are dual-licensed (code MIT, artwork CC-BY-NC
+by default unless you specify otherwise).

@@ -1,0 +1,28 @@
+All Rights Reserved
+
+The artwork and audio files in this directory and its subdirectories
+(including but not limited to .png, .apng, .svg, .m4a, .mp3, .mov, .gif,
+and theme.json) are NOT covered by the project's source-code license
+(MIT). All rights are reserved by their respective copyright holders.
+
+mypet cat character ("小猫"):
+  Copyright (c) 2026 alvin (anzy-renlab-ai). All rights reserved.
+  Originally produced via Kling AI / Minimax / Jimeng generation from
+  prompts authored by the copyright holder, with subsequent compositing,
+  background removal, and APNG packaging.
+
+You may NOT copy, modify, distribute, embed in another product, train AI
+models on, or use any artwork from this directory without explicit
+written permission from the copyright holder, except for:
+
+1. Personal use of the mypet application as distributed by this project.
+2. Reproductions in technical documentation that discuss the mypet
+   project (e.g. screenshots in blog posts, tutorials, reviews).
+
+Commercial use, redistribution as part of a derivative pet pack,
+inclusion in another desktop-pet application, or training generative AI
+models on these assets is prohibited without prior written consent.
+
+For licensing inquiries, open an issue at
+https://github.com/anzy-renlab-ai/mypet or contact the copyright holder
+through GitHub.
