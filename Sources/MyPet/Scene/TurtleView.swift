@@ -135,10 +135,14 @@ struct CuteCatFace: View {
                              anchor: .bottom)
                 .rotationEffect(.degrees(m.tilt), anchor: .bottom)
                 .offset(x: m.dx, y: m.dy)
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                // Cross-fade between states (0.5s) — outgoing APNG fades while
+                // incoming APNG fades in. The brief overlap softens the cut
+                // when the previous video's end pose doesn't match the next
+                // video's start pose.
+                .transition(.opacity)
                 .id(state)
         }
-        .animation(.easeInOut(duration: 0.35), value: state)
+        .animation(.easeInOut(duration: 0.5), value: state)
         // Play the matching m4a once on state change (no-op if no audio shipped).
         .onChange(of: state) { newState in
             CatAudio.shared.playIfChanged(stateKey: newState.rawValue)
