@@ -4,13 +4,19 @@ import Foundation
 ///
 /// Base states drive a sprite (or vector) layer. `excited` is an overlay
 /// that briefly covers any base state.
-enum PetState: Equatable {
+enum PetState: String, Equatable {
     case idle
     case eating
     case excited
     case purring
     case sleepy
     case hungry
+    /// Sleep sequence (borrowed from clawd-on-desk's idea — idle escalates
+    /// through yawning → dozing → sleeping when the user steps away).
+    /// All wake on any interaction (hover/feed/menu).
+    case yawning
+    case dozing
+    case sleeping
 }
 
 /// Pure state machine — no UI, no I/O. Drives transitions on events.
@@ -29,7 +35,13 @@ enum PetState: Equatable {
 /// or after feed. We expose `evaluateIdleTransitions` for callers to invoke.
 struct PetStateMachine {
 
-    /// Sleepy after this many seconds of no events.
+    /// Sleep progression timings (seconds since last event).
+    /// Mirrors clawd-on-desk's idle → yawning → dozing → sleeping cadence.
+    var yawnAfter: TimeInterval = 30
+    var dozeAfter: TimeInterval = 90        // total since lastEventAt
+    var sleepAfter: TimeInterval = 180      // total since lastEventAt
+    /// Legacy "sleepy" still here for FeedCoordinator API compat; falls
+    /// inside the sleep progression. Reserved for after 2h.
     var sleepyAfter: TimeInterval = 2 * 3600
 
     /// Hungry after this many seconds since last successful feed.
@@ -90,20 +102,38 @@ struct PetStateMachine {
 
     /// Caller invokes when an idle event happens (app activate, mouse near,
     /// menu opened, post-feed transition). Evaluates whether to escalate.
+    /// Sleep progression: idle → yawning (30s) → dozing (90s) → sleeping (180s).
     mutating func evaluateIdleTransitions(now: Date = Date()) {
-        guard state == .idle else { return }
         let sinceFeed = now.timeIntervalSince(lastFeedAt)
         let sinceEvent = now.timeIntervalSince(lastEventAt)
-        if lastFeedAt != .distantPast, sinceFeed >= hungryAfter {
+
+        // Long-term states first
+        if lastFeedAt != .distantPast, sinceFeed >= hungryAfter,
+           [.idle, .yawning, .dozing, .sleeping].contains(state) {
             state = .hungry
-        } else if sinceEvent >= sleepyAfter {
+            return
+        }
+        if sinceEvent >= sleepyAfter, state == .idle {
             state = .sleepy
+            return
+        }
+
+        // Sleep sequence — only progresses, never regresses without wake.
+        switch state {
+        case .idle:
+            if sinceEvent >= yawnAfter { state = .yawning }
+        case .yawning:
+            if sinceEvent >= dozeAfter { state = .dozing }
+        case .dozing:
+            if sinceEvent >= sleepAfter { state = .sleeping }
+        default:
+            break
         }
     }
 
-    /// Wake the cat (mouse enters interactive zone or app activated).
+    /// Wake the cat. Any sleep-progression / sleepy / hungry state → idle.
     mutating func wake(now: Date = Date()) {
-        if state == .sleepy || state == .hungry {
+        if [.sleepy, .hungry, .yawning, .dozing, .sleeping].contains(state) {
             state = .idle
         }
         lastEventAt = now

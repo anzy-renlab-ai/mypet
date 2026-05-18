@@ -106,6 +106,23 @@ final class PetWindow: NSWindow, NSWindowDelegate {
         setFrame(f, display: true, animate: true)
     }
 
+    enum Edge { case top, right, bottom, left }
+
+    /// Explicitly park the cat against one screen edge (menubar action).
+    /// Animated, respects `snapMargin`.
+    func snap(to edge: Edge) {
+        guard let screen = self.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        var f = frame
+        switch edge {
+        case .top:    f.origin.y = visible.maxY - f.size.height - snapMargin
+        case .bottom: f.origin.y = visible.minY + snapMargin
+        case .left:   f.origin.x = visible.minX + snapMargin
+        case .right:  f.origin.x = visible.maxX - f.size.width - snapMargin
+        }
+        setFrame(f, display: true, animate: true)
+    }
+
     /// Re-anchor the bottom-right corner after a resize.
     func placeBottomRight() {
         guard let screen = NSScreen.main ?? screen else { return }

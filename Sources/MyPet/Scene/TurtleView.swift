@@ -90,125 +90,67 @@ struct TurtleView: View {
     }
 }
 
-// MARK: - The cat itself: PNG sprite, no halo, no emoji
+// MARK: - The cat itself: APNG-driven, theme-mapped
 
-/// Renders a state-specific cat PNG. Multi-variant packs cross-fade.
-/// If a state has no bundled sprite, falls back to idle. If neither exists,
-/// renders nothing (the slot is empty until user drops a PNG in).
+/// Renders a state-specific animated cat. Asset mapping is read from
+/// `CatTheme` (bundled `theme.json` → falls back to `CatTheme.default`).
+/// `AnimatedCatView` plays APNG natively via NSImageView; PNG fallback
+/// for any state whose APNG hasn't been generated yet.
 struct CuteCatFace: View {
     let state: PetState
     let t: TimeInterval
 
-    /// Per-state frame pool + slow cross-fade between random picks.
-    @State private var frames: [NSImage] = []
-    @State private var currentIdx: Int = 0
-
-    /// Seconds between cross-fade switches. Slow so it reads as natural
-    /// re-positioning, not as flicker.
-    private let dwellSeconds: Double = 8.0
-    /// Fade duration. Long for a calm dissolve.
-    private let fadeSeconds: Double = 2.0
+    /// Loaded once per process — themes don't change at runtime today.
+    private static let theme: CatTheme = CatTheme.load()
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            if !frames.isEmpty {
-                let m = microMotion()
-                Image(nsImage: frames[currentIdx % frames.count])
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: s, height: s)
-                    // Subtle realistic ground shadow only — no halo / glow.
-                    // Lets the cat sprite be the focal point.
-                    .shadow(color: .black.opacity(0.22),
-                            radius: s * 0.06, x: 0, y: s * 0.04)
-                    .id(currentIdx)
-                    .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
-                    .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
-                    .rotationEffect(.degrees(m.tilt), anchor: .bottom)
-                    .offset(x: m.dx, y: m.dy)
-            }
+            let resource = Self.theme.resourceName(for: state.rawValue)
+            let m = microMotion()
+            AnimatedCatView(resourceName: resource)
+                .frame(width: s, height: s)
+                // Subtle realistic ground shadow only — no halo / glow.
+                .shadow(color: .black.opacity(0.22),
+                        radius: s * 0.06, x: 0, y: s * 0.04)
+                .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
+                .rotationEffect(.degrees(m.tilt), anchor: .bottom)
+                .offset(x: m.dx, y: m.dy)
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .id(state)
         }
-        .task(id: state) {
-            frames = Self.allSprites(for: state)
-            currentIdx = 0
-            guard frames.count > 1 else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(dwellSeconds * 1_000_000_000))
-                if Task.isCancelled { break }
-                await MainActor.run {
-                    withAnimation(.easeInOut(duration: fadeSeconds)) {
-                        currentIdx = (currentIdx + 1) % frames.count
-                    }
-                }
-            }
-        }
+        .animation(.easeInOut(duration: 0.35), value: state)
     }
 
     /// Procedural micro-motion: breath + tilt + bob. Tuned subtle —
-    /// motion should support the sprite, not distract from it.
+    /// motion should support the (eventual APNG) sprite, not fight with it.
+    /// APNG itself owns the visible motion; this layer adds tiny living
+    /// energy to whatever frame is currently shown.
     private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
         switch state {
         case .idle:
-            let breath = CGFloat(sin(t * 1.2)) * 0.018
-            return (1.0 + breath, 1.0 - breath * 0.5, sin(t * 0.5) * 0.8, 0, 0)
+            let breath = CGFloat(sin(t * 1.2)) * 0.012
+            return (1.0 + breath, 1.0 - breath * 0.5, sin(t * 0.5) * 0.5, 0, 0)
         case .eating:
             let chomp = CGFloat(abs(sin(t * 5.5)))
-            return (1.0 - chomp * 0.05, 1.0 + chomp * 0.05, 0, 0, -chomp * 2)
+            return (1.0 - chomp * 0.03, 1.0 + chomp * 0.03, 0, 0, -chomp * 1.5)
         case .excited:
             let bounce = CGFloat(abs(sin(t * 3.8)))
-            return (1.0 + bounce * 0.06, 1.0 + bounce * 0.07, 0, 0, -bounce * 8)
+            return (1.0 + bounce * 0.04, 1.0 + bounce * 0.05, 0, 0, -bounce * 6)
         case .purring:
-            let purr = CGFloat(sin(t * 2.6)) * 0.025
+            let purr = CGFloat(sin(t * 2.6)) * 0.018
             return (1.0 + purr, 1.0 - purr * 0.5, 0, 0, 0)
-        case .sleepy:
-            let nap = CGFloat(sin(t * 0.7)) * 0.012
-            return (1.0 + nap, 1.0 - nap, sin(t * 0.35) * 1.2 - 3, 0, 0)
+        case .sleepy, .dozing:
+            let nap = CGFloat(sin(t * 0.7)) * 0.010
+            return (1.0 + nap, 1.0 - nap, sin(t * 0.35) * 1.0 - 2, 0, 0)
+        case .sleeping:
+            let snore = CGFloat(sin(t * 0.5)) * 0.015
+            return (1.0 + snore, 1.0 - snore * 0.4, -4, 0, 0)
+        case .yawning:
+            let yawn = CGFloat(sin(t * 1.8)) * 0.020
+            return (1.0 + yawn, 1.0 - yawn * 0.6, sin(t * 0.6) * 0.8, 0, 0)
         case .hungry:
             return (1.0, 1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
-        }
-    }
-
-    /// All sprite variants for the state from the bundle. Cascade:
-    /// `cat-<state>.png` + numbered variants → if none → `cat-idle.png` pack.
-    /// Returns empty if not even idle exists.
-    static func allSprites(for state: PetState) -> [NSImage] {
-        let direct = loadVariants(slug: stateSlug(state))
-        if !direct.isEmpty { return direct }
-        // Fallback: use idle pack for any state that has no dedicated sprite yet
-        return loadVariants(slug: "idle")
-    }
-
-    private static func loadVariants(slug: String) -> [NSImage] {
-        let base = "cat-\(slug)"
-        var images: [NSImage] = []
-        if let url = Bundle.module.url(forResource: base, withExtension: "png"),
-           let img = NSImage(contentsOf: url) {
-            images.append(img)
-        }
-        for i in 2...9 {
-            if let url = Bundle.module.url(forResource: "\(base)-\(i)", withExtension: "png"),
-               let img = NSImage(contentsOf: url) {
-                images.append(img)
-            }
-        }
-        return images
-    }
-
-    /// Random first pick (kept as a convenience).
-    static func pickSprite(for state: PetState) -> NSImage? {
-        allSprites(for: state).randomElement()
-    }
-
-    private static func stateSlug(_ state: PetState) -> String {
-        switch state {
-        case .idle: return "idle"
-        case .eating: return "eating"
-        case .excited: return "excited"
-        case .purring: return "purring"
-        case .sleepy: return "sleepy"
-        case .hungry: return "hungry"
         }
     }
 
