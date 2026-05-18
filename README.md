@@ -47,17 +47,44 @@ visual — still zero background work.
 
 ## States
 
-Each state has its own bundled 3D-rendered kitten sprite + state-tinted halo
-glow + procedural micro-motion (breath / chomp / bounce / nap / sway):
+Each state plays its own bundled APNG (3D Pixar-style kitten, generated via
+Kling and cleaned through BiRefNet) with subtle procedural micro-motion on
+top (breath / sway / nod). State transitions cross-fade so consecutive
+APNGs blend instead of cut.
 
+### Feedback cycle (user-triggered)
 | State | When | Looks like |
 |---|---|---|
-| `idle` | resting | sitting, slow breath + gentle sway, warm halo |
-| `eating` | feeding now | open mouth chomping, orange halo, ⚡🐟 particles |
-| `excited` | feed succeeded | jump pose, gold halo, ✦ stars overhead |
-| `purring` | tip showing | eyes closed smile, pink halo |
-| `sleepy` | 2h idle | head tilted, blue-violet halo |
-| `hungry` | 24h no feed / error | sad pleading face, brown halo |
+| `idle` | default | sitting, slow breath + tail-tip twitch |
+| `eating` | feeding | nibbling a Claude-cookie held in both paws |
+| `excited` | feed succeeded | sparkly eyes, tail vibrating high |
+| `purring` | tip showing | eyes closed in crescent smile, head tilted |
+
+### Sleep progression (passive — silent, never grabs attention)
+| State | When | Looks like |
+|---|---|---|
+| `sleepy` | 5min idle | heavy eyelids, slow blink, one droop-and-recover |
+| `dozing` | 15min idle | sitting upright, head dropped to chest, eyes closed |
+| `sleeping` | 30min idle | curled into a fluffy ball on its side, deep breath |
+
+### Mood / engagement
+| State | When | Looks like |
+|---|---|---|
+| `hungry` | 24h no feed | quiet sad sit, glistening eyes, no demand |
+| `petting` | hover ≥1s on cat | head leans into invisible hand, eyes squint happy |
+
+### Spatial (drag the window to a screen edge)
+| State | When | Looks like |
+|---|---|---|
+| `clingTop` | window near top | kitten hangs upside-down by both front paws |
+| `peekRight` | window near right edge | half body peeks out from the right, looking back curiously |
+| `peekLeft` | window near left edge | mirrored peekRight |
+
+### Personality moments (rare, idle-only, gated to recent activity)
+| State | When | Looks like |
+|---|---|---|
+| `licking` | rare ambient | kitten licks its right paw (~5 slow licks) |
+| `washing` | rare ambient | kitten wipes face with the licked paw |
 
 ## Tip themes
 
