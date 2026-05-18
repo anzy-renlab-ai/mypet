@@ -18,18 +18,23 @@ struct TipBubble: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(copied ? "✓ 已复制到剪贴板" : text)
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.10))
+            Text(copied ? "已复制" : text)
+                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .foregroundColor(Color(red: 0.14, green: 0.14, blue: 0.16))
                 .multilineTextAlignment(.center)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .frame(maxWidth: 300)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(.white.opacity(0.97))
-                        .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 4)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.white.opacity(0.96))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.black.opacity(0.04), lineWidth: 0.5)
+                        )
+                        .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 3)
                 )
                 .overlay(alignment: .topLeading) {
                     if let badge = themeBadge {

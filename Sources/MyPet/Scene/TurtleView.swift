@@ -103,39 +103,31 @@ struct CuteCatFace: View {
     @State private var frames: [NSImage] = []
     @State private var currentIdx: Int = 0
 
-    /// Seconds between cross-fade switches.
-    private let dwellSeconds: Double = 5.0
-    /// Fade duration (seconds).
-    private let fadeSeconds: Double = 1.5
+    /// Seconds between cross-fade switches. Slow so it reads as natural
+    /// re-positioning, not as flicker.
+    private let dwellSeconds: Double = 8.0
+    /// Fade duration. Long for a calm dissolve.
+    private let fadeSeconds: Double = 2.0
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
-            ZStack {
-                // Soft halo behind cat — masks bg-removal edge artifacts +
-                // gives the pet a "cozy glow". Color tints with state.
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [haloColor.opacity(0.55), haloColor.opacity(0)],
-                        center: .center,
-                        startRadius: s * 0.10,
-                        endRadius: s * 0.55))
-                    .blur(radius: s * 0.05)
-                    .frame(width: s * 1.10, height: s * 1.10)
-
-                if !frames.isEmpty {
-                    let m = microMotion()
-                    Image(nsImage: frames[currentIdx % frames.count])
-                        .resizable()
-                        .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: s, height: s)
-                        .id(currentIdx)
-                        .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
-                        .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
-                        .rotationEffect(.degrees(m.tilt), anchor: .bottom)
-                        .offset(x: m.dx, y: m.dy)
-                }
+            if !frames.isEmpty {
+                let m = microMotion()
+                Image(nsImage: frames[currentIdx % frames.count])
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: s, height: s)
+                    // Subtle realistic ground shadow only — no halo / glow.
+                    // Lets the cat sprite be the focal point.
+                    .shadow(color: .black.opacity(0.22),
+                            radius: s * 0.06, x: 0, y: s * 0.04)
+                    .id(currentIdx)
+                    .transition(.opacity.animation(.easeInOut(duration: fadeSeconds)))
+                    .scaleEffect(x: m.sx, y: m.sy, anchor: .bottom)
+                    .rotationEffect(.degrees(m.tilt), anchor: .bottom)
+                    .offset(x: m.dx, y: m.dy)
             }
         }
         .task(id: state) {
@@ -154,47 +146,27 @@ struct CuteCatFace: View {
         }
     }
 
-    /// Procedural micro-motion: breath + tilt + bob. Per-state tuning.
-    /// Magnitudes tuned for visible-but-not-distracting motion.
-    /// State-tinted halo color (radial gradient behind cat).
-    private var haloColor: Color {
-        switch state {
-        case .excited: return Color(red: 1.00, green: 0.78, blue: 0.30)
-        case .eating: return Color(red: 1.00, green: 0.72, blue: 0.32)
-        case .purring: return Color(red: 1.00, green: 0.55, blue: 0.72)
-        case .sleepy: return Color(red: 0.62, green: 0.68, blue: 0.85)
-        case .hungry: return Color(red: 0.85, green: 0.62, blue: 0.45)
-        default: return Color(red: 1.00, green: 0.78, blue: 0.55)
-        }
-    }
-
+    /// Procedural micro-motion: breath + tilt + bob. Tuned subtle —
+    /// motion should support the sprite, not distract from it.
     private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
         switch state {
         case .idle:
-            // Visible breathing: ±3% scale + 1.5° gentle head tilt
-            let breath = CGFloat(sin(t * 1.4)) * 0.030
-            let sway = CGFloat(sin(t * 0.8)) * 2.0
-            return (1.0 + breath, 1.0 - breath * 0.6, sin(t * 0.6) * 1.5, sway, 0)
+            let breath = CGFloat(sin(t * 1.2)) * 0.018
+            return (1.0 + breath, 1.0 - breath * 0.5, sin(t * 0.5) * 0.8, 0, 0)
         case .eating:
-            // Pronounced chomp: scale + dip
-            let chomp = CGFloat(abs(sin(t * 6.0)))
-            return (1.0 - chomp * 0.10, 1.0 + chomp * 0.10, sin(t * 3.0) * 3.0, 0, -chomp * 4)
+            let chomp = CGFloat(abs(sin(t * 5.5)))
+            return (1.0 - chomp * 0.05, 1.0 + chomp * 0.05, 0, 0, -chomp * 2)
         case .excited:
-            // Big jump
-            let bounce = CGFloat(abs(sin(t * 4.5)))
-            return (1.0 + bounce * 0.12, 1.0 + bounce * 0.14, 0, 0, -bounce * 14)
+            let bounce = CGFloat(abs(sin(t * 3.8)))
+            return (1.0 + bounce * 0.06, 1.0 + bounce * 0.07, 0, 0, -bounce * 8)
         case .purring:
-            // Slow rhythmic purr scale
-            let purr = CGFloat(sin(t * 3.0)) * 0.04
-            return (1.0 + purr, 1.0 - purr * 0.5, sin(t * 1.2) * 0.5, 0, 0)
+            let purr = CGFloat(sin(t * 2.6)) * 0.025
+            return (1.0 + purr, 1.0 - purr * 0.5, 0, 0, 0)
         case .sleepy:
-            // Head tilted, slow breath
-            let nap = CGFloat(sin(t * 0.8)) * 0.020
-            return (1.0 + nap, 1.0 - nap, sin(t * 0.4) * 2.0 - 6, 0, 0)
+            let nap = CGFloat(sin(t * 0.7)) * 0.012
+            return (1.0 + nap, 1.0 - nap, sin(t * 0.35) * 1.2 - 3, 0, 0)
         case .hungry:
-            // Visible side-to-side sway
-            let sway = CGFloat(sin(t * 1.2))
-            return (1.0, 1.0, sin(t * 0.6) * 1.0, sway * 4.0, 0)
+            return (1.0, 1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
         }
     }
 
