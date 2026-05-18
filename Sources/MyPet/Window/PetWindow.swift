@@ -98,7 +98,8 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     /// Inspect distance to each screen edge and notify a state transition
     /// when within `edgeStateThreshold`. Top edge → clingTop; left/right →
     /// peekLeft/peekRight. Bottom edge is ignored (cat lives there anyway).
-    private func evaluateEdgeState() {
+    /// Visible for tests.
+    func evaluateEdgeState() {
         guard let screen = self.screen ?? NSScreen.main else { return }
         let visible = screen.visibleFrame
         let distLeft  = frame.minX - visible.minX
