@@ -22,9 +22,10 @@ struct TipBubble: View {
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.10))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .frame(maxWidth: 260)
+                .frame(maxWidth: 300)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(.white.opacity(0.97))

@@ -184,40 +184,39 @@ final class ClaudeSubprocess {
     /// - Strips markdown code fences
     /// - Strips leading list markers (-, *, 1.)
     /// - Trims whitespace
-    /// - Takes first non-empty line
-    /// - Truncates to 140 chars + "…"
+    /// - **Keeps newlines** (multi-line haiku / 打油诗 / list)
+    /// - Collapses runs of blank lines
+    /// - Truncates to 220 chars + "…"
     static func normalizeTip(_ raw: String) -> String {
         var s = stripANSI(raw).trimmingCharacters(in: .whitespacesAndNewlines)
-        // Markdown code fence: ```...``` (may be on its own lines)
+        // Markdown code fence: ```...```
         if s.hasPrefix("```") && s.hasSuffix("```") {
             let inner = s.dropFirst(3).dropLast(3)
             s = inner.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        // First line
-        if let firstNewline = s.firstIndex(of: "\n") {
-            s = String(s[..<firstNewline])
-        }
-        s = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Leading markers
-        let markers = ["- ", "* ", "• "]
-        for m in markers {
-            if s.hasPrefix(m) {
-                s = String(s.dropFirst(m.count))
+        // Process per line: strip list markers, drop empty, keep order
+        var lines: [String] = []
+        for raw in s.components(separatedBy: "\n") {
+            var line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.isEmpty { continue }
+            for m in ["- ", "* ", "• "] where line.hasPrefix(m) {
+                line = String(line.dropFirst(m.count))
                 break
             }
-        }
-        // Numbered "1. ", "2. "
-        if let dotIdx = s.firstIndex(of: "."),
-           dotIdx < s.index(s.startIndex, offsetBy: 3, limitedBy: s.endIndex) ?? s.endIndex,
-           s[..<dotIdx].allSatisfy(\.isNumber) {
-            let after = s.index(after: dotIdx)
-            if after < s.endIndex && s[after] == " " {
-                s = String(s[s.index(after: after)...])
+            if let dotIdx = line.firstIndex(of: "."),
+               dotIdx < line.index(line.startIndex, offsetBy: 3, limitedBy: line.endIndex) ?? line.endIndex,
+               line[..<dotIdx].allSatisfy(\.isNumber) {
+                let after = line.index(after: dotIdx)
+                if after < line.endIndex && line[after] == " " {
+                    line = String(line[line.index(after: after)...])
+                }
             }
+            lines.append(line)
         }
-        // Truncate
-        if s.count > 140 {
-            let trimmed = String(s.prefix(139))
+        s = lines.joined(separator: "\n")
+        // Truncate (generous limit so haiku / 打油诗 / multi-line tips survive)
+        if s.count > 220 {
+            let trimmed = String(s.prefix(219))
             s = trimmed + "…"
         }
         return s

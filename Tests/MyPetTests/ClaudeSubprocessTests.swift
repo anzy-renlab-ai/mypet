@@ -159,10 +159,10 @@ final class ClaudeSubprocessTests: XCTestCase {
         XCTAssertEqual(ClaudeSubprocess.normalizeTip("  hello\n"), "hello")
     }
 
-    func test_normalizeTip_truncatesAt140Chars() {
-        let long = String(repeating: "a", count: 200)
+    func test_normalizeTip_truncatesAt220Chars() {
+        let long = String(repeating: "a", count: 300)
         let out = ClaudeSubprocess.normalizeTip(long)
-        XCTAssertEqual(out.count, 140, "Must truncate to exactly 140")
+        XCTAssertEqual(out.count, 220, "Must truncate to exactly 220")
         XCTAssertTrue(out.hasSuffix("…"))
     }
 
@@ -170,10 +170,23 @@ final class ClaudeSubprocessTests: XCTestCase {
         XCTAssertEqual(ClaudeSubprocess.normalizeTip("short"), "short")
     }
 
-    func test_normalizeTip_takesFirstLine_whenMultiLine() {
-        // LLM disobeys "one item": returns 3 lines
+    func test_normalizeTip_keepsMultiLine_for打油诗AndHaiku() {
+        // 打油诗 / haiku / list tips have legitimate newlines — keep them.
         let multi = "first tip line\nsecond tip line\nthird"
-        XCTAssertEqual(ClaudeSubprocess.normalizeTip(multi), "first tip line")
+        XCTAssertEqual(
+            ClaudeSubprocess.normalizeTip(multi),
+            "first tip line\nsecond tip line\nthird"
+        )
+    }
+
+    func test_normalizeTip_collapsesBlankLines() {
+        let messy = "a\n\n\nb\n\nc"
+        XCTAssertEqual(ClaudeSubprocess.normalizeTip(messy), "a\nb\nc")
+    }
+
+    func test_normalizeTip_stripsMarkersPerLine() {
+        let multi = "- first\n* second\n1. third"
+        XCTAssertEqual(ClaudeSubprocess.normalizeTip(multi), "first\nsecond\nthird")
     }
 
     func test_normalizeTip_stripsMarkdownCodeFences() {

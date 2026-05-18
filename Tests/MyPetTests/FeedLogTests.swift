@@ -141,4 +141,21 @@ final class FeedLogTests: XCTestCase {
         let hungry = try await log.isHungry(after: 24 * 3600)
         XCTAssertFalse(hungry)
     }
+
+    func test_append_capsAtMaxEntries() async throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mypet-cap-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let log = FeedLog(url: tmp)
+        let n = FeedLog.maxEntries + 50
+        for i in 0..<n {
+            try await log.append(.init(ts: Date(timeIntervalSince1970: TimeInterval(i)),
+                                        tip: "t\(i)", exitCode: 0, tokens: 10))
+        }
+        let entries = try await log.read()
+        XCTAssertEqual(entries.count, FeedLog.maxEntries, "must cap at maxEntries")
+        XCTAssertEqual(entries.first?.tip, "t\(n - FeedLog.maxEntries)",
+                       "oldest entries should be dropped")
+        XCTAssertEqual(entries.last?.tip, "t\(n - 1)")
+    }
 }

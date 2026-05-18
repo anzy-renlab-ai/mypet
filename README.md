@@ -2,15 +2,16 @@
 
 > A fluffy desktop cat that eats your Claude Code tokens.
 >
-> Hover for one second. The cat chomps one `claude -p` call and bubbles back
-> a Claude Code tip, a prompt to try, a 打油诗 (Chinese quatrain), or a tech-news headline.
+> Move your mouse near the cat — a 🪙 coin follows your cursor. **Double-click**
+> the cat to feed it. It chomps one `claude -p` call and bubbles back a Claude
+> Code tip, a prompt to try, a 打油诗 (Chinese quatrain), or a tech-news headline.
 > Then goes back to sleep.
 
 [![CI](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml/badge.svg)](https://github.com/anzy-renlab-ai/mypet/actions/workflows/ci.yml)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://www.apple.com/macos)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-AppKit-orange)](https://developer.apple.com/swiftui)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-84%20passing-success)](Tests)
+[![Tests](https://img.shields.io/badge/tests-95%20passing-success)](Tests)
 
 <p align="center">
   <img src="docs/screenshots/feed-demo.gif" width="480" alt="hover the cat for 1 second, it chomps and a Claude Code tip pops up">
@@ -28,16 +29,17 @@ It's a screensaver that pays rent.
 ## How it works
 
 ```
- hover 1s   ─►  chomp animation  ─►  claude -p "<prompt>"  ─►  💬 tip bubble
-                                                                    │
-   ◄─ purr ──────────── 8s ──────── click to dismiss / auto-fade ◄──┘
+ mouse near + double-click  ─►  chomp animation  ─►  claude -p "<prompt>"  ─►  💬 tip bubble
+                                                                                    │
+                                           click bubble copies tip + dismisses  ◄──┘
 ```
 
-1. Mouse over the cat for ~1 second (a small dot ring fills up).
-2. Cat plays a chomp animation, ears twitch, sparkles fly.
-3. `mypet` shells out to your local `claude` CLI — same login, same quota.
-4. The reply appears in a tiny speech bubble above the cat.
-5. Cat purrs, then drifts back to idle.
+1. Move mouse close to the cat — a 🪙 coin follows your cursor.
+2. **Double-click** the cat to trigger a feed.
+3. Cat plays a chomp animation; lightning + fish particles fly up; halo glows.
+4. `mypet` shells out to your local `claude` CLI — same login, same quota.
+5. The reply appears in a tiny speech bubble (with theme badge + token count).
+6. Click the bubble to copy the tip; it auto-dismisses after a few seconds.
 
 Cooldown: one feed per minute (the cat tells you when it's still digesting).
 No interaction for 24h → the cat gets hungry (a sad face + a tear). All
@@ -45,14 +47,17 @@ visual — still zero background work.
 
 ## States
 
+Each state has its own bundled 3D-rendered kitten sprite + state-tinted halo
+glow + procedural micro-motion (breath / chomp / bounce / nap / sway):
+
 | State | When | Looks like |
 |---|---|---|
-| `idle` | resting | 🐱 gentle sway, slow blink |
-| `eating` | feeding now | 😺 mouth open, ⚡ + 🐟 sparkles |
-| `excited` | feed succeeded | 😸 jump, ✦ stars overhead |
-| `purring` | tip showing | 😻 heart eyes, ♡ overhead |
-| `sleepy` | 2h idle | 😽 closed eyes, head tilt, `zZz` |
-| `hungry` | 24h no feed / error | 😿 frown, single tear |
+| `idle` | resting | sitting, slow breath + gentle sway, warm halo |
+| `eating` | feeding now | open mouth chomping, orange halo, ⚡🐟 particles |
+| `excited` | feed succeeded | jump pose, gold halo, ✦ stars overhead |
+| `purring` | tip showing | eyes closed smile, pink halo |
+| `sleepy` | 2h idle | head tilted, blue-violet halo |
+| `hungry` | 24h no feed / error | sad pleading face, brown halo |
 
 ## Tip themes
 
@@ -97,10 +102,13 @@ anywhere. The 🐾 menu-bar icon gives you `Feed now`, `开机自启`, and quit.
 swift test
 ```
 
-81 tests cover the `claude` subprocess wrapper (binary discovery, timeout,
-cancellation, output normalization, error classification, concurrency guard,
-FD-leak check), the feed log (corruption recovery, cooldown, hungry detection),
-the pet state machine, the feed coordinator, and the window configuration.
+95 tests cover the `claude` subprocess wrapper (binary discovery, timeout,
+cancellation, output normalization including multi-line tips, error
+classification, concurrency guard, FD-leak check, JSON envelope parsing for
+token capture), the feed log (corruption recovery, cooldown, hungry
+detection, max-entries cap), the pet state machine, the feed coordinator
+(theme rotation + locale-aware prompts + token reporting), and the window
+configuration (snap-to-edge, expanded/compact sizes).
 
 ## Layout
 

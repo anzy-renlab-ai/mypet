@@ -50,9 +50,16 @@ actor FeedLog {
         return dir.appendingPathComponent("feed-log.json")
     }
 
+    /// Cap log size to avoid unbounded growth. Oldest entries dropped.
+    /// 1000 entries × ~200B JSON ≈ 200KB max — generous for years of use.
+    static let maxEntries: Int = 1000
+
     func append(_ entry: Entry) async throws {
         var entries = try readUnchecked()
         entries.append(entry)
+        if entries.count > Self.maxEntries {
+            entries = Array(entries.suffix(Self.maxEntries))
+        }
         try persist(entries)
     }
 

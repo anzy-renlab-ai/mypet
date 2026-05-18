@@ -7,7 +7,7 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     /// catches the cursor + renders the following token coin.
     static let compactSize = NSSize(width: 180, height: 180)
     /// Expanded size — room for a tip bubble above the cat.
-    static let expandedSize = NSSize(width: 360, height: 260)
+    static let expandedSize = NSSize(width: 400, height: 360)
 
     /// Tests + no-arg construction.
     convenience init() {
@@ -67,6 +67,11 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     /// Timer that fires once the user stops moving the window. windowDidMove
     /// keeps resetting it during a drag; on rest, we snap to the nearest edge.
     private var snapDebounce: Timer?
+
+    deinit {
+        snapDebounce?.invalidate()
+        snapDebounce = nil
+    }
 
     func windowDidMove(_ notification: Notification) {
         snapDebounce?.invalidate()
