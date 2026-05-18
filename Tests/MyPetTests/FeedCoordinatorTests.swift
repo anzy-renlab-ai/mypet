@@ -290,4 +290,199 @@ final class FeedCoordinatorTests: XCTestCase {
         // smoke-tests that wake doesn't crash.
         XCTAssertNotEqual(coord.state, .sleepy)
     }
+
+    // MARK: - Edge state (window-position driven)
+
+    func test_setEdgeState_clingTop_fromIdle() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.setEdgeState(.clingTop)
+        XCTAssertEqual(coord.state, .clingTop)
+    }
+
+    func test_setEdgeState_clearsWithNil() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.setEdgeState(.peekLeft)
+        XCTAssertEqual(coord.state, .peekLeft)
+        coord.setEdgeState(nil)
+        XCTAssertEqual(coord.state, .idle)
+    }
+
+    func test_setEdgeState_doesNotInterruptFeed() async {
+        let feeder = MockFeeder(tipResult: .success("tip"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.05
+        coord.tipDisplaySeconds = 0.05
+
+        let task = Task { await coord.feed() }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        // With a sync-fast mock feeder the state can already be eating OR
+        // excited by now — the assertion is "we're inside the feed cycle".
+        let feedCycle: Set<PetState> = [.eating, .excited]
+        XCTAssertTrue(feedCycle.contains(coord.state), "Expected feed cycle, got \(coord.state)")
+
+        // User drags window to top during the chomp — must NOT override.
+        coord.setEdgeState(.clingTop)
+        XCTAssertNotEqual(coord.state, .clingTop, "Edge state must not interrupt the active feed cycle")
+        XCTAssertTrue(feedCycle.contains(coord.state), "Still inside the feed cycle")
+        await task.value
+    }
+
+    // MARK: - Petting (hover-on-cat driven)
+
+    func test_setPetting_fromIdle_setsPetting() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.setPetting(true)
+        XCTAssertEqual(coord.state, .petting)
+    }
+
+    func test_setPetting_off_returnsToIdle() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.setPetting(true)
+        coord.setPetting(false)
+        XCTAssertEqual(coord.state, .idle)
+    }
+
+    func test_setPetting_blockedDuringEdgeState() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.setEdgeState(.clingTop)
+        coord.setPetting(true)
+        XCTAssertEqual(coord.state, .clingTop, "Petting must not override an edge state")
+    }
+
+    // MARK: - Grooming (spontaneous personality)
+
+    func test_triggerGrooming_licking_fromIdle() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.triggerGrooming(.licking)
+        XCTAssertEqual(coord.state, .licking)
+    }
+
+    func test_triggerGrooming_blockedDuringFeed() async {
+        let feeder = MockFeeder(tipResult: .success("tip"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.05
+        coord.tipDisplaySeconds = 0.05
+
+        let task = Task { await coord.feed() }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        coord.triggerGrooming(.washing)
+        XCTAssertNotEqual(coord.state, .washing, "Grooming must not override the feed cycle")
+        XCTAssertTrue([.eating, .excited].contains(coord.state))
+        await task.value
+    }
+
+    func test_groomingDidFinish_returnsToIdle() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+        coord.triggerGrooming(.washing)
+        XCTAssertEqual(coord.state, .washing)
+        coord.groomingDidFinish()
+        XCTAssertEqual(coord.state, .idle)
+    }
+
+    // MARK: - E2E user flows (simulating real interactions end-to-end)
+
+    /// Simulates: user opens app → double-clicks → cat eats → tip shows → dismiss → idle.
+    func test_e2e_doubleClickFeedFullCycle() async {
+        let feeder = MockFeeder(tipResult: .success("today's tip ✨"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.05
+        coord.tipDisplaySeconds = 30   // long: we'll dismiss explicitly mid-cycle
+
+        XCTAssertEqual(coord.state, .idle, "Initial state")
+
+        // User double-clicks → MouseMonitor.onDoubleClick fires coord.feed()
+        let feedTask = Task { await coord.feed() }
+        // Don't await the full feed task — it would block for tipDisplaySeconds.
+        // Sample state at key points instead.
+
+        // Past the excited overlay (~50ms) — should land in purring with tip.
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        XCTAssertEqual(coord.state, .purring, "Tip-display phase")
+        XCTAssertNotNil(coord.tip, "Tip text must be set")
+
+        // User clicks tip bubble to dismiss → back to idle.
+        coord.dismissTip()
+        XCTAssertEqual(coord.state, .idle)
+        XCTAssertNil(coord.tip)
+
+        feedTask.cancel()  // clean up the still-sleeping auto-dismiss timer
+    }
+
+    /// Simulates: user drags window to top edge → clingTop → drags away → idle.
+    func test_e2e_dragToEdgeAndBack() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+
+        // PetWindow.onEdgeState would fire .clingTop when the window touches top
+        coord.setEdgeState(.clingTop)
+        XCTAssertEqual(coord.state, .clingTop)
+
+        // User drags from top to right side
+        coord.setEdgeState(.peekRight)
+        XCTAssertEqual(coord.state, .peekRight)
+
+        // User drags back to center → onEdgeState(nil)
+        coord.setEdgeState(nil)
+        XCTAssertEqual(coord.state, .idle)
+    }
+
+    /// Simulates: user hovers cursor on cat for 1s → petting → cursor leaves → idle.
+    func test_e2e_hoverPetThenLeave() {
+        let coord = FeedCoordinator(feeder: MockFeeder(tipResult: .success("x")), log: feedLog)
+
+        // After 1s linger, PetRootView fires setPetting(true)
+        coord.setPetting(true)
+        XCTAssertEqual(coord.state, .petting)
+
+        // Cursor moves off cat → setPetting(false)
+        coord.setPetting(false)
+        XCTAssertEqual(coord.state, .idle)
+    }
+
+    /// Simulates a hostile race: user feeds, then immediately tries to drag the
+    /// window to an edge and hover-pet. Feed cycle must win the whole way.
+    func test_e2e_feedWinsOverConcurrentEdgeAndHover() async {
+        let feeder = MockFeeder(tipResult: .success("never give up the chomp"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.05
+        coord.tipDisplaySeconds = 0.05
+
+        let task = Task { await coord.feed() }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        let feedCycle: Set<PetState> = [.eating, .excited]
+        XCTAssertTrue(feedCycle.contains(coord.state), "Expected feed cycle, got \(coord.state)")
+
+        // Concurrent attacks — all must be no-ops on state
+        coord.setEdgeState(.clingTop)
+        coord.setPetting(true)
+        coord.triggerGrooming(.licking)
+        XCTAssertNotEqual(coord.state, .clingTop)
+        XCTAssertNotEqual(coord.state, .petting)
+        XCTAssertNotEqual(coord.state, .licking)
+        XCTAssertTrue(feedCycle.contains(coord.state),
+                      "Feed cycle must survive concurrent edge / petting / grooming attempts")
+        await task.value
+    }
+
+    /// Simulates: user is doing nothing → idle. Then drag to right edge → peekRight.
+    /// Then double-click → window leaves edge zone? No — actually edge state should
+    /// be cleared by the feed start (which moves state to eating), since edge can't
+    /// override feed. Verifies the right precedence on transition.
+    func test_e2e_doubleClickWhileAtEdge_feedTakesOver() async {
+        let feeder = MockFeeder(tipResult: .success("tip"))
+        let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        coord.excitedOverlaySeconds = 0.05
+        coord.tipDisplaySeconds = 0.05
+
+        coord.setEdgeState(.peekRight)
+        XCTAssertEqual(coord.state, .peekRight)
+
+        // User double-clicks while window is at right edge — feed should fire
+        // and override the edge state (feed is the higher precedence event).
+        let task = Task { await coord.feed() }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        let feedCycle: Set<PetState> = [.eating, .excited]
+        XCTAssertTrue(feedCycle.contains(coord.state),
+                      "feed() must override an active edge state, got \(coord.state)")
+        await task.value
+    }
 }

@@ -144,4 +144,93 @@ final class PetWindowTests: XCTestCase {
         XCTAssertEqual(w.frame.origin.x, expectedX, accuracy: 0.5)
         XCTAssertEqual(w.frame.origin.y, expectedY, accuracy: 0.5)
     }
+
+    // MARK: - Edge-state detection
+
+    /// Captures every `onEdgeState` callback so a test can assert ordering.
+    private func setUpEdgeRecorder(_ w: PetWindow) -> () -> [PetState?] {
+        var log: [PetState?] = []
+        w.onEdgeState = { log.append($0) }
+        return { log }
+    }
+
+    func test_evaluateEdgeState_nearTop_firesClingTop() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        let recorder = setUpEdgeRecorder(w)
+
+        // Position so frame.maxY is right at the visible top → distTop = 0.
+        w.setFrame(NSRect(x: 100, y: visible.maxY - w.frame.height,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+
+        XCTAssertEqual(recorder().last, .clingTop)
+    }
+
+    func test_evaluateEdgeState_nearLeft_firesPeekLeft() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        let recorder = setUpEdgeRecorder(w)
+
+        w.setFrame(NSRect(x: visible.minX, y: 200,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+
+        XCTAssertEqual(recorder().last, .peekLeft)
+    }
+
+    func test_evaluateEdgeState_nearRight_firesPeekRight() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        let recorder = setUpEdgeRecorder(w)
+
+        w.setFrame(NSRect(x: visible.maxX - w.frame.width, y: 200,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+
+        XCTAssertEqual(recorder().last, .peekRight)
+    }
+
+    func test_evaluateEdgeState_centerOfScreen_firesNil() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        let recorder = setUpEdgeRecorder(w)
+
+        // First push to an edge so lastEdgeState is non-nil...
+        w.setFrame(NSRect(x: visible.minX, y: 200,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+        // ...then move to center → onEdgeState(nil).
+        w.setFrame(NSRect(x: visible.midX, y: visible.midY,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+
+        XCTAssertEqual(recorder().last, nil as PetState?,
+                       "Center of screen should produce a nil edge-state callback")
+    }
+
+    func test_evaluateEdgeState_debouncesIdenticalCalls() {
+        let w = PetWindow()
+        guard let screen = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = screen.visibleFrame
+        let recorder = setUpEdgeRecorder(w)
+
+        w.setFrame(NSRect(x: 100, y: visible.maxY - w.frame.height,
+                          width: w.frame.width, height: w.frame.height),
+                   display: false)
+        w.evaluateEdgeState()
+        w.evaluateEdgeState()
+        w.evaluateEdgeState()
+
+        XCTAssertEqual(recorder().count, 1, "Repeated calls in the same zone must debounce to a single emission")
+    }
 }

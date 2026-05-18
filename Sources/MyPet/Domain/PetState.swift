@@ -152,7 +152,9 @@ struct PetStateMachine {
     // MARK: - Spatial interaction (set by PetWindow.edge proximity)
 
     private static let edgeOverridable: Set<PetState> = [
-        .idle, .sleepy, .dozing, .sleeping, .hungry, .petting, .licking, .washing
+        .idle, .sleepy, .dozing, .sleeping, .hungry, .petting, .licking, .washing,
+        // Edge → edge transitions allowed (user dragged from one edge to another).
+        .clingTop, .peekLeft, .peekRight
     ]
 
     /// Set an edge state if the cat isn't busy with the feed cycle.
