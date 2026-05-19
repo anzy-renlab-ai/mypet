@@ -15,19 +15,22 @@ final class MenubarController: NSObject {
     private let onShowOnboarding: () -> Void
     private let onQuit: () -> Void
     private let onBringHere: () -> Void
+    private let onSnapTo: (PetWindow.Edge) -> Void
 
     init(
         coordinator: FeedCoordinator,
         feedLog: FeedLog,
         onShowOnboarding: @escaping () -> Void,
         onQuit: @escaping () -> Void,
-        onBringHere: @escaping () -> Void = {}
+        onBringHere: @escaping () -> Void = {},
+        onSnapTo: @escaping (PetWindow.Edge) -> Void = { _ in }
     ) {
         self.coordinator = coordinator
         self.feedLog = feedLog
         self.onShowOnboarding = onShowOnboarding
         self.onQuit = onQuit
         self.onBringHere = onBringHere
+        self.onSnapTo = onSnapTo
         super.init()
         install()
     }
@@ -94,6 +97,24 @@ final class MenubarController: NSObject {
         )
         bringItem.target = self
         menu.addItem(bringItem)
+
+        // Snap-to-edge submenu — the click-through window can't be dragged,
+        // so this is how the user triggers the spatial states.
+        let snapParent = NSMenuItem(title: "靠边站", action: nil, keyEquivalent: "")
+        let snapMenu = NSMenu(title: "靠边站")
+        for (label, edge) in [
+            ("⬆ 挂屏顶 (clingTop)", PetWindow.Edge.top),
+            ("⬅ 左边探出 (peekLeft)", PetWindow.Edge.left),
+            ("➡ 右边探出 (peekRight)", PetWindow.Edge.right),
+            ("⬇ 回到右下角", PetWindow.Edge.bottom),
+        ] {
+            let item = NSMenuItem(title: label, action: #selector(snapTo(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = edge
+            snapMenu.addItem(item)
+        }
+        snapParent.submenu = snapMenu
+        menu.addItem(snapParent)
 
         menu.addItem(.separator())
 
@@ -188,6 +209,11 @@ final class MenubarController: NSObject {
 
     @objc private func bringHere() {
         onBringHere()
+    }
+
+    @objc private func snapTo(_ sender: NSMenuItem) {
+        guard let edge = sender.representedObject as? PetWindow.Edge else { return }
+        onSnapTo(edge)
     }
 
     @objc private func quit() {

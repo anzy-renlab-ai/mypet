@@ -70,20 +70,21 @@ final class FeedCoordinatorTests: XCTestCase {
         XCTAssertEqual(coord.feedCount, 1)
     }
 
-    func test_feed_firstFeed_showsWelcomeTipNotRawTip() async {
+    func test_feed_firstFeed_showsRealTipNotWelcome() async {
+        // Behavior changed: user wanted the real LLM-returned tip on every
+        // feed, including the first. (Was previously a canned welcome.)
         let feeder = MockFeeder(tipResult: .success("a fun tip 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
-        coord.tipDisplaySeconds = 5  // longer so we can sample
+        coord.tipDisplaySeconds = 5
 
         XCTAssertTrue(coord.isFirstFeed)
         let task = Task { await coord.feed() }
-
-        // Wait past excited overlay so purring + tip set.
-        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        try? await Task.sleep(nanoseconds: 250_000_000)
 
         XCTAssertEqual(coord.state, .purring)
-        XCTAssertEqual(coord.tip, "喵～我是 mypet 的小猫，谢谢你接我回家 🐾")
+        XCTAssertEqual(coord.tip, "a fun tip 🐾",
+                       "First feed must show the LLM tip, not a canned welcome")
         XCTAssertFalse(coord.isFirstFeed, "isFirstFeed must clear after first success")
 
         coord.dismissTip()

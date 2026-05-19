@@ -283,9 +283,10 @@ final class FeedCoordinator: ObservableObject {
         machine.excitedDidFinish()
         state = machine.state
         excited = false
-        tip = isFirstFeed
-            ? "喵～我是 mypet 的小猫，谢谢你接我回家 🐾"
-            : receivedTip
+        // Always show the real LLM-returned tip — first feed used to show a
+        // canned welcome message, but the user wanted the actual fetched
+        // result every time.
+        tip = receivedTip
         isFirstFeed = false
 
         // Auto-dismiss tip after duration (user can also click)

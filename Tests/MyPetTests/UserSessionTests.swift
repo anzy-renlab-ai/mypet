@@ -55,17 +55,18 @@ final class UserSessionTests: XCTestCase {
     }
 
     func test_cookieVisibility_perState() {
-        // Restful states: cookie shows (user can feed)
-        for s in [PetState.idle, .sleepy, .hungry, .dozing, .sleeping] {
-            XCTAssertTrue(TurtleView.cookieAllowed(in: s),
-                          "Cookie should show in \(s) — user can feed any time")
+        // Active feed cycle hides cookie (cookie was just eaten).
+        for s in [PetState.eating, .excited, .purring] {
+            XCTAssertFalse(TurtleView.cookieAllowed(in: s),
+                           "Cookie should hide in \(s) (active feed cycle)")
         }
-        // Active states: cookie hides
-        for s in [PetState.eating, .excited, .purring,
+        // Everything else: cookie keeps following cursor — it's "I see
+        // your cursor" feedback independent of the cat's pose.
+        for s in [PetState.idle, .sleepy, .hungry, .dozing, .sleeping,
                   .clingTop, .peekLeft, .peekRight,
                   .petting, .licking, .washing] {
-            XCTAssertFalse(TurtleView.cookieAllowed(in: s),
-                           "Cookie should hide in \(s)")
+            XCTAssertTrue(TurtleView.cookieAllowed(in: s),
+                          "Cookie should keep following in \(s)")
         }
     }
 
@@ -100,8 +101,8 @@ final class UserSessionTests: XCTestCase {
         let c = makeCoord()
         c.setEdgeState(.clingTop)
         XCTAssertEqual(c.state, .clingTop)
-        XCTAssertFalse(TurtleView.cookieAllowed(in: c.state),
-                       "Cookie hides while clinging")
+        XCTAssertTrue(TurtleView.cookieAllowed(in: c.state),
+                      "Cookie stays visible while clinging — cursor feedback")
     }
 
     func test_path6_dragLeftRight_togglesPeek() {
@@ -120,7 +121,8 @@ final class UserSessionTests: XCTestCase {
         let c = makeCoord()
         c.setPetting(true)
         XCTAssertEqual(c.state, .petting)
-        XCTAssertFalse(TurtleView.cookieAllowed(in: c.state))
+        XCTAssertTrue(TurtleView.cookieAllowed(in: c.state),
+                      "Cookie should still follow while the cat enjoys a pet")
     }
 
     func test_path7_petting_releaseReturnsIdle() {

@@ -26,6 +26,12 @@ final class MouseMonitor: ObservableObject {
     /// Fired on a double-click landing inside the window frame.
     var onDoubleClick: () -> Void = {}
 
+    /// Fired on a *single* click landing inside the window frame, with the
+    /// click position in window content coordinates. AppDelegate uses this
+    /// to dismiss the tip bubble — SwiftUI's onTapGesture can't fire with
+    /// `ignoresMouseEvents=true`, so we route the dismiss through here.
+    var onSingleClick: (CGPoint) -> Void = { _ in }
+
     private weak var window: NSWindow?
     private var tokens: [Any] = []
 
@@ -75,8 +81,12 @@ final class MouseMonitor: ObservableObject {
     private func handleMouseDown(_ event: NSEvent) {
         let screen = NSEvent.mouseLocation
         guard let win = window, win.frame.contains(screen) else { return }
+        let local = CGPoint(x: screen.x - win.frame.minX,
+                            y: screen.y - win.frame.minY)
         if event.clickCount == 2 {
             onDoubleClick()
+        } else if event.clickCount == 1 {
+            onSingleClick(local)
         }
     }
 }

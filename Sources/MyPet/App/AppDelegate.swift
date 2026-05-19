@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var feedLog: FeedLog!
     private var tipCancellable: AnyCancellable?
     private var mouseMonitor: MouseMonitor?
+    private var groomingTimer: Timer?
 
     private var hasShownOnboarding: Bool {
         get { UserDefaults.standard.bool(forKey: "mypet.onboarding.shown") }
@@ -39,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onBringHere: { [weak self] in
                 self?.petWindow?.placeBottomRight()
+            },
+            onSnapTo: { [weak self] edge in
+                self?.petWindow?.snap(to: edge)
             }
         )
 
@@ -54,6 +58,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 logger.info("MYPET_AUTO_FEED set — firing feed()")
                 await coordinator.feed()
+            }
+        }
+
+        // Rare spontaneous grooming while idle. Every 90s there's a 4%
+        // chance of triggering a licking or washing animation that auto-
+        // returns to idle after 5s. Only fires from .idle so it never
+        // interrupts feed / petting / edge states (non-intrusive principle).
+        groomingTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self,
+                      self.coordinator.state == .idle,
+                      Double.random(in: 0..<1) < 0.04 else { return }
+                let kind: PetState = Bool.random() ? .licking : .washing
+                self.coordinator.triggerGrooming(kind)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                self.coordinator.groomingDidFinish()
             }
         }
 
@@ -85,6 +105,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.onDoubleClick = { [weak self] in
             Task { @MainActor [weak self] in
                 await self?.coordinator.feed()
+            }
+        }
+        // Single click while a tip bubble is visible → dismiss the tip.
+        // SwiftUI's onTapGesture can't fire with ignoresMouseEvents=true,
+        // so the dismiss tap has to be routed through MouseMonitor instead.
+        // The click still passes through to whatever app is behind us
+        // (acceptable side-effect; ignoring it would require Accessibility).
+        monitor.onSingleClick = { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if self.coordinator.tip != nil {
+                    self.coordinator.dismissTip()
+                }
             }
         }
         mouseMonitor = monitor
@@ -217,12 +251,12 @@ struct PetRootView: View {
         return coord.lastTokens > 0 ? coord.lastTokens : nil
     }
 
-    /// Hide the badge for first-feed welcome / cooldown / error tips —
-    /// those are app messages, not LLM output.
+    /// Hide the badge for cooldown / error tips — those are app messages,
+    /// not LLM output. (The "接我回家" welcome tip has been removed in favor
+    /// of always showing the real LLM response, so we no longer skip it.)
     private func themeBadge(for coord: FeedCoordinator) -> ThemeBadge? {
         guard coord.lastError == nil else { return nil }
         if coord.tip?.contains("消化") == true { return nil }
-        if coord.tip?.contains("接我回家") == true { return nil }
         switch coord.lastTheme {
         case .claudeTip:  return .claudeTip
         case .promptIdea: return .promptIdea

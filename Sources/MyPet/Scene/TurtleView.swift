@@ -77,11 +77,17 @@ struct TurtleView: View {
             if let pos = cursorPos, cursorInZone, cookieAllowed {
                 FollowingToken(t: t)
                     .position(x: pos.x, y: pos.y)
-                    .transition(.opacity)
+                    // Asymmetric transition: appears with a tiny fade, hides
+                    // INSTANTLY. When the user double-clicks, they expect the
+                    // cookie to vanish the moment feeding starts — not lag
+                    // through a fade-out while the cat is already chomping.
+                    .transition(.asymmetric(
+                        insertion: .opacity.animation(.easeOut(duration: 0.18)),
+                        removal: .identity
+                    ))
                     .allowsHitTesting(false)
             }
         }
-        .animation(.easeOut(duration: 0.18), value: cookieVisibilityKey)
     }
 
     /// Whether the cursor-following cookie may render given the current state.
@@ -90,15 +96,19 @@ struct TurtleView: View {
     private var cookieAllowed: Bool { Self.cookieAllowed(in: state) }
 
     /// Pure decision: should the cursor-following cookie be allowed in a
-    /// given pet state? Active feed / edge / engagement states hide it;
-    /// restful states show it. Exposed for tests.
+    /// given pet state? Only the **active feed cycle** hides the cookie —
+    /// that's when the cookie was just "eaten" by the cat and shouldn't
+    /// still be floating around. Every other state (including petting,
+    /// edge poses, and ambient grooming) keeps the cookie visible while
+    /// the cursor is near, because cookie = "I see your cursor" feedback
+    /// independent of the cat's pose. Exposed for tests.
     static func cookieAllowed(in state: PetState) -> Bool {
         switch state {
-        case .eating, .excited, .purring,
+        case .eating, .excited, .purring:
+            return false
+        case .idle, .sleepy, .hungry, .dozing, .sleeping,
              .clingTop, .peekLeft, .peekRight,
              .petting, .licking, .washing:
-            return false
-        case .idle, .sleepy, .hungry, .dozing, .sleeping:
             return true
         }
     }
@@ -175,14 +185,15 @@ struct CuteCatFace: View {
         }
     }
 
-    /// Per-state Y offset. Curled-on-side poses look like they're floating
-    /// mid-air without this — push them down so the body rests visibly on
-    /// the ground. (purring's Kling output came back curled instead of the
-    /// requested sitting pose, so it gets the same treatment.)
+    /// Per-state Y offset. ONLY curled-on-side `sleeping` looks like it's
+    /// floating mid-air without this — push it down so the body visibly
+    /// rests on the ground. (Earlier `purring` was offset too, back when
+    /// 5447 was mis-mapped to purring; with 5571 in place, purring is a
+    /// sitting cat and needs zero offset.)
     static func baseDy(for state: PetState) -> CGFloat {
         switch state {
-        case .sleeping, .purring:  return 20
-        default:                   return 0
+        case .sleeping:  return 20
+        default:         return 0
         }
     }
 
