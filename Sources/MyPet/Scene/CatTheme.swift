@@ -28,9 +28,9 @@ struct CatTheme: Codable {
     /// by horizontally mirroring peekRight at render time, not by a
     /// separate generation).
     ///
-    /// Placeholders: `petting` / `licking` / `washing` reuse existing close
-    /// assets until their own APNGs are generated — petting borrows purring
-    /// (same eyes-closed bliss), grooming falls back to idle.
+    /// Placeholders: `excited` / `licking` / `washing` use `cat-idle` until
+    /// real assets land — none of Kling's batch outputs matched these poses
+    /// well enough to ship.
     static let `default` = CatTheme(
         schemaVersion: 1,
         name: "mypet",
@@ -38,7 +38,7 @@ struct CatTheme: Codable {
         states: [
             "idle":      "cat-idle",
             "eating":    "cat-eating",
-            "excited":   "cat-excited",
+            "excited":   "cat-idle",       // placeholder — no usable Kling take
             "purring":   "cat-purring",
             "hungry":    "cat-hungry",
             "sleepy":    "cat-sleepy",
@@ -47,7 +47,7 @@ struct CatTheme: Codable {
             "clingTop":  "cat-clingTop",
             "peekRight": "cat-peekRight",
             "peekLeft":  "cat-peekRight",  // mirrored at render time
-            "petting":   "cat-purring",    // placeholder until generated
+            "petting":   "cat-petting",
             "licking":   "cat-idle",       // placeholder
             "washing":   "cat-idle",       // placeholder
         ],

@@ -36,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onQuit: {
                 NSApp.terminate(nil)
+            },
+            onBringHere: { [weak self] in
+                self?.petWindow?.placeBottomRight()
             }
         )
 
@@ -54,7 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Probe idle transitions on app activate
+        // Probe idle transitions on app activate. Also re-anchor the cat
+        // to the screen that currently has the cursor — the user might
+        // have switched monitors while the cat was sitting somewhere
+        // they can no longer see.
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
@@ -62,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.coordinator.evaluateIdle()
+                self?.petWindow?.placeBottomRight()
             }
         }
     }
@@ -95,12 +102,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         petWindow = window
 
         // Grow the window to fit a tip bubble while one is showing, shrink back
-        // when it clears. Without this the bubble is wider than the window and
-        // the tip text gets clipped.
+        // when it clears.
+        //
+        // When SHOWING a tip: resize the window FIRST without animation, so
+        // the SwiftUI bubble has a full content frame on its first layout
+        // pass. Otherwise the bubble was being clipped by the still-growing
+        // window and the user had to click to force a redraw before the
+        // text became visible.
+        //
+        // When HIDING: animate the shrink — looks tidy on tip dismiss.
         tipCancellable = coordinator.$tip.sink { [weak self] tip in
             guard let self, let w = self.petWindow else { return }
-            w.setExpanded(tip != nil, animate: true)
-            w.placeBottomRight()
+            w.setExpanded(tip != nil, animate: tip == nil)
         }
     }
 

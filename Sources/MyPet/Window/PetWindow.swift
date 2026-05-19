@@ -168,15 +168,25 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     }
 
     /// Re-anchor the bottom-right corner after a resize.
+    /// Picks the screen that currently contains the cursor — multi-monitor
+    /// setups were sending the cat to the wrong display when NSScreen.main
+    /// resolved to the menubar screen rather than the user's active one.
+    /// Also forces the window front so it stays visible even though
+    /// `ignoresMouseEvents = true` prevents it becoming key.
     func placeBottomRight() {
-        guard let screen = NSScreen.main ?? screen else { return }
-        let visible = screen.visibleFrame
+        let cursor = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(cursor) }
+                  ?? NSScreen.main
+                  ?? self.screen
+        guard let s = screen else { return }
+        let visible = s.visibleFrame
         let margin: CGFloat = 24
         let size = frame.size
         setFrameOrigin(NSPoint(
             x: visible.maxX - size.width - margin,
             y: visible.minY + margin
         ))
+        orderFrontRegardless()
     }
 
     /// Grow/shrink to fit a tip bubble, keeping the turtle in place.

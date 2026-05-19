@@ -45,17 +45,29 @@ struct AnimatedCatView: NSViewRepresentable {
         init(lastName: String) { self.lastName = lastName }
     }
 
-    /// Try APNG first, fall back to PNG so we ship something during
-    /// the asset migration period.
+    /// Try APNG first, fall back to PNG, and finally fall back to cat-idle
+    /// if neither exists. Ensures the cat is NEVER invisible — a missing
+    /// state-specific asset (e.g. during a pipeline regeneration) just
+    /// shows the idle pose instead of a blank window.
     private func loadImage() -> NSImage? {
-        let url: URL? = Bundle.module.url(forResource: resourceName, withExtension: "apng")
-            ?? Bundle.module.url(forResource: resourceName, withExtension: "png")
-        guard let u = url, let img = NSImage(contentsOf: u) else { return nil }
-        // Override the image's intrinsic size so NSImageView's
-        // proportional scaling lays it out within whatever bounds
-        // SwiftUI's .frame() assigns. Without this, the APNG's native
-        // pixel size (512+) leaks through and the cat overflows.
-        img.size = NSSize(width: 96, height: 96)
+        let candidates: [URL?] = [
+            Bundle.module.url(forResource: resourceName, withExtension: "apng"),
+            Bundle.module.url(forResource: resourceName, withExtension: "png"),
+            Bundle.module.url(forResource: "cat-idle", withExtension: "apng"),
+            Bundle.module.url(forResource: "cat-idle", withExtension: "png"),
+        ]
+        guard let u = candidates.compactMap({ $0 }).first,
+              let img = NSImage(contentsOf: u)
+        else { return nil }
+        // Constrain to a 96pt bounding box while preserving aspect ratio.
+        // A flat 96×96 squashes non-square APNGs (e.g. cat-sleeping is a
+        // horizontal curled-ball, ~1.5:1 — forcing square stretched it).
+        let original = img.size
+        let scale = 96 / max(original.width, original.height)
+        img.size = NSSize(
+            width: original.width * scale,
+            height: original.height * scale
+        )
         return img
     }
 }

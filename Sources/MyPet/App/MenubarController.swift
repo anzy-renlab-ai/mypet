@@ -14,17 +14,20 @@ final class MenubarController: NSObject {
     private let feedLog: FeedLog
     private let onShowOnboarding: () -> Void
     private let onQuit: () -> Void
+    private let onBringHere: () -> Void
 
     init(
         coordinator: FeedCoordinator,
         feedLog: FeedLog,
         onShowOnboarding: @escaping () -> Void,
-        onQuit: @escaping () -> Void
+        onQuit: @escaping () -> Void,
+        onBringHere: @escaping () -> Void = {}
     ) {
         self.coordinator = coordinator
         self.feedLog = feedLog
         self.onShowOnboarding = onShowOnboarding
         self.onQuit = onQuit
+        self.onBringHere = onBringHere
         super.init()
         install()
     }
@@ -83,6 +86,14 @@ final class MenubarController: NSObject {
         recentSubmenu.delegate = self
         recentParent.submenu = recentSubmenu
         menu.addItem(recentParent)
+
+        let bringItem = NSMenuItem(
+            title: "把小猫拽到这块屏",
+            action: #selector(bringHere),
+            keyEquivalent: ""
+        )
+        bringItem.target = self
+        menu.addItem(bringItem)
 
         menu.addItem(.separator())
 
@@ -173,6 +184,10 @@ final class MenubarController: NSObject {
 
     @objc private func showOnboarding() {
         onShowOnboarding()
+    }
+
+    @objc private func bringHere() {
+        onBringHere()
     }
 
     @objc private func quit() {

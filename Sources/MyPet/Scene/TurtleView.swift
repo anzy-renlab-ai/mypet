@@ -129,12 +129,17 @@ struct CuteCatFace: View {
                 // Subtle realistic ground shadow only — no halo / glow.
                 .shadow(color: .black.opacity(0.22),
                         radius: s * 0.06, x: 0, y: s * 0.04)
-                // peekLeft shares the peekRight asset — mirror it horizontally.
-                .scaleEffect(x: m.sx * (state == .peekLeft ? -1 : 1),
-                             y: m.sy,
-                             anchor: .bottom)
+                // Combine per-state base scale + micro-motion breathing.
+                // Curled poses (sleeping / dozing) are baseline-smaller since
+                // a curled cat occupies less footprint than a sitting one.
+                // peekLeft shares the peekRight asset — mirror horizontally.
+                .scaleEffect(
+                    x: Self.baseScale(for: state) * m.s * (state == .peekLeft ? -1 : 1),
+                    y: Self.baseScale(for: state) * m.s,
+                    anchor: .bottom
+                )
                 .rotationEffect(.degrees(m.tilt), anchor: .bottom)
-                .offset(x: m.dx, y: m.dy)
+                .offset(x: m.dx, y: m.dy + Self.baseDy(for: state))
                 // Cross-fade between states (0.5s) — outgoing APNG fades while
                 // incoming APNG fades in. The brief overlap softens the cut
                 // when the previous video's end pose doesn't match the next
@@ -152,48 +157,61 @@ struct CuteCatFace: View {
         }
     }
 
-    /// Procedural micro-motion: breath + tilt + bob. Tuned subtle —
-    /// motion should support the (eventual APNG) sprite, not fight with it.
-    /// APNG itself owns the visible motion; this layer adds tiny living
-    /// energy to whatever frame is currently shown.
-    private func microMotion() -> (sx: CGFloat, sy: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
+    /// Per-state baseline scale, applied on top of the APNG's max-dim-96
+    /// sizing. Curled / loaf poses naturally take less space than upright
+    /// sitting — bumping them down a notch keeps the on-screen footprint
+    /// across states feeling consistent.
+    static func baseScale(for state: PetState) -> CGFloat {
+        switch state {
+        case .sleeping:        return 0.78
+        case .dozing:          return 0.88
+        case .clingTop:        return 0.92
+        default:               return 1.0
+        }
+    }
+
+    /// Per-state Y offset. Curled-on-side poses look like they're floating
+    /// mid-air without this — push them down so the body rests visibly on
+    /// the ground. (purring's Kling output came back curled instead of the
+    /// requested sitting pose, so it gets the same treatment.)
+    static func baseDy(for state: PetState) -> CGFloat {
+        switch state {
+        case .sleeping, .purring:  return 20
+        default:                   return 0
+        }
+    }
+
+    /// Procedural micro-motion overlay. **Uniform scale only** (sx == sy) so
+    /// the bundled APNG's aspect ratio is preserved — anything else squashes
+    /// or stretches the kitten visibly. The APNG itself carries all the
+    /// visible motion; this layer just adds tiny living energy + a touch
+    /// of position offset / tilt.
+    private func microMotion() -> (s: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
         switch state {
         case .idle:
-            let breath = CGFloat(sin(t * 1.2)) * 0.012
-            return (1.0 + breath, 1.0 - breath * 0.5, sin(t * 0.5) * 0.5, 0, 0)
+            return (1.0 + CGFloat(sin(t * 1.2)) * 0.008, sin(t * 0.5) * 0.5, 0, 0)
         case .eating:
             let chomp = CGFloat(abs(sin(t * 5.5)))
-            return (1.0 - chomp * 0.03, 1.0 + chomp * 0.03, 0, 0, -chomp * 1.5)
+            return (1.0 + chomp * 0.01, 0, 0, -chomp * 1.0)
         case .excited:
             let bounce = CGFloat(abs(sin(t * 3.8)))
-            return (1.0 + bounce * 0.04, 1.0 + bounce * 0.05, 0, 0, -bounce * 6)
+            return (1.0 + bounce * 0.02, 0, 0, -bounce * 5)
         case .purring:
-            let purr = CGFloat(sin(t * 2.6)) * 0.018
-            return (1.0 + purr, 1.0 - purr * 0.5, 0, 0, 0)
+            return (1.0 + CGFloat(sin(t * 2.6)) * 0.010, 0, 0, 0)
         case .sleepy, .dozing:
-            let nap = CGFloat(sin(t * 0.7)) * 0.010
-            return (1.0 + nap, 1.0 - nap, sin(t * 0.35) * 1.0 - 2, 0, 0)
+            return (1.0 + CGFloat(sin(t * 0.7)) * 0.006, sin(t * 0.35) * 1.0 - 2, 0, 0)
         case .sleeping:
-            let snore = CGFloat(sin(t * 0.5)) * 0.015
-            return (1.0 + snore, 1.0 - snore * 0.4, -4, 0, 0)
+            return (1.0 + CGFloat(sin(t * 0.5)) * 0.008, -4, 0, 0)
         case .hungry:
-            return (1.0, 1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
+            return (1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
         case .clingTop:
-            // Body sway like a hanging weight.
-            let sway = CGFloat(sin(t * 1.4)) * 0.025
-            return (1.0 + sway, 1.0 - sway * 0.4, sin(t * 1.4) * 6, 0, 0)
+            return (1.0, sin(t * 1.4) * 6, 0, 0)
         case .peekLeft, .peekRight:
-            // Curious head bob, no body translation.
-            return (1.0, 1.0, sin(t * 1.1) * 1.2, 0, 0)
+            return (1.0, sin(t * 1.1) * 1.2, 0, 0)
         case .petting:
-            // Tilt-relaxed bliss.
-            let purr = CGFloat(sin(t * 2.0)) * 0.012
-            return (1.0 + purr, 1.0 - purr * 0.5, sin(t * 0.7) * 1.0 + 4, 0, 0)
+            return (1.0 + CGFloat(sin(t * 2.0)) * 0.008, sin(t * 0.7) * 1.0 + 4, 0, 0)
         case .licking, .washing:
-            // Focused grooming — minimal body motion, the asset itself does
-            // the head/paw choreography.
-            let breath = CGFloat(sin(t * 1.0)) * 0.008
-            return (1.0 + breath, 1.0 - breath * 0.5, 0, 0, 0)
+            return (1.0 + CGFloat(sin(t * 1.0)) * 0.005, 0, 0, 0)
         }
     }
 
