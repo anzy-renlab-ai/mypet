@@ -85,14 +85,17 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
-        // Edge-state evaluation runs on every move tick — cheap and gives
-        // immediate visual feedback as the user drags toward an edge.
+        // Edge-state evaluation runs on every move tick — cheap and lets the
+        // menubar snap actions transition the cat into clingTop/peekLeft/
+        // peekRight as soon as the window arrives.
+        //
+        // NOTE: the old `snapDebounce → snapToNearestEdgeIfClose()` pass was
+        // removed. It existed back when the window was user-draggable, but
+        // with `ignoresMouseEvents = true` the user can't drag at all — and
+        // it was firing on every internal setFrame (e.g. tip-bubble expand),
+        // visibly shifting the cat right after a feed double-click. Dead
+        // code now; the menubar snap actions move the window directly.
         evaluateEdgeState()
-
-        snapDebounce?.invalidate()
-        snapDebounce = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: false) { [weak self] _ in
-            DispatchQueue.main.async { self?.snapToNearestEdgeIfClose() }
-        }
     }
 
     /// Inspect distance to each screen edge and notify a state transition
@@ -153,38 +156,60 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     enum Edge { case top, right, bottom, left }
 
     /// Explicitly park the cat against one screen edge (menubar action).
-    /// Animated, respects `snapMargin`.
+    /// Uses the screen containing the cursor so the snap lands where the
+    /// user is actually looking. Animated.
+    ///
+    /// Behavior per edge:
+    ///   .top    — window's top touches screen top; cat hangs down
+    ///             (paired with the upside-down cat-clingTop.apng).
+    ///   .left   — HALF the window is pushed offscreen left so the cat
+    ///             peeks from the left edge.
+    ///   .right  — mirror of .left.
+    ///   .bottom — back to the home bottom-right corner with margin.
     func snap(to edge: Edge) {
-        guard let screen = self.screen ?? NSScreen.main else { return }
-        let visible = screen.visibleFrame
+        guard let s = NSScreen.main ?? self.screen else { return }
+        let visible = s.visibleFrame
         var f = frame
+
         switch edge {
-        case .top:    f.origin.y = visible.maxY - f.size.height - snapMargin
-        case .bottom: f.origin.y = visible.minY + snapMargin
-        case .left:   f.origin.x = visible.minX + snapMargin
-        case .right:  f.origin.x = visible.maxX - f.size.width - snapMargin
+        case .top:
+            // Top edge flush with screen top; cat sprite (clingTop pose)
+            // is drawn pointing down inside the window.
+            f.origin.x = visible.maxX - f.size.width - snapMargin
+            f.origin.y = visible.maxY - f.size.height
+        case .left:
+            // Half the window pushed past the visible-left edge → only the
+            // right half is on-screen → cat appears to peek out from the left.
+            f.origin.x = visible.minX - f.size.width / 2
+            f.origin.y = visible.minY + (visible.height - f.size.height) / 2
+        case .right:
+            f.origin.x = visible.maxX - f.size.width / 2
+            f.origin.y = visible.minY + (visible.height - f.size.height) / 2
+        case .bottom:
+            f.origin.x = visible.maxX - f.size.width - 16
+            f.origin.y = visible.minY + 32
         }
         setFrame(f, display: true, animate: true)
+        orderFrontRegardless()
     }
 
     /// Re-anchor the bottom-right corner after a resize.
-    /// Picks the screen that currently contains the cursor — multi-monitor
-    /// setups were sending the cat to the wrong display when NSScreen.main
-    /// resolved to the menubar screen rather than the user's active one.
-    /// Also forces the window front so it stays visible even though
-    /// `ignoresMouseEvents = true` prevents it becoming key.
+    /// Always uses the main screen (NSScreen.main) — user preference: cat
+    /// stays on the primary display, never the secondary, regardless of
+    /// where the cursor is. The vertical anchor sits the window flush with
+    /// the dock area so the cat appears to *stand on* the screen edge
+    /// rather than float above it. Forces the window front so it stays
+    /// visible even though `ignoresMouseEvents = true` prevents it becoming
+    /// key.
     func placeBottomRight() {
-        let cursor = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { $0.frame.contains(cursor) }
-                  ?? NSScreen.main
-                  ?? self.screen
-        guard let s = screen else { return }
+        guard let s = NSScreen.main ?? self.screen else { return }
         let visible = s.visibleFrame
-        let margin: CGFloat = 24
+        let rightMargin: CGFloat = 16
+        let bottomMargin: CGFloat = 32   // raises the cat enough that the paws clear the dock area
         let size = frame.size
         setFrameOrigin(NSPoint(
-            x: visible.maxX - size.width - margin,
-            y: visible.minY + margin
+            x: visible.maxX - size.width - rightMargin,
+            y: visible.minY + bottomMargin
         ))
         orderFrontRegardless()
     }

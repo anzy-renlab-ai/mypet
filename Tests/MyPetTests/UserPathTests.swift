@@ -358,50 +358,49 @@ final class UserPathTests: XCTestCase {
     //
     // We DO test what each callback's *destination* does:
 
-    /// I1: "Feed now" → coordinator.feed() is the entry point (D2 covers it).
-    /// I3: "把小猫拽到这块屏" → calls petWindow.placeBottomRight() which
-    /// must end with the window's right edge near a screen's visible.maxX.
+    /// I3: "Bring cat to this screen" → calls petWindow.placeBottomRight()
+    /// which always re-anchors to the main screen's bottom-right corner,
+    /// flush with the dock area so the cat "stands on" the screen edge.
     func test_I3_bringHere_movesToBottomRight() {
         let w = PetWindow()
-        // Park it explicitly at the top-left first so placeBottomRight
-        // has somewhere to move from.
         w.setFrameOrigin(.zero)
         w.placeBottomRight()
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
-                       ?? NSScreen.main else { return XCTFail("no screen") }
+        guard let screen = NSScreen.main else { return XCTFail("no main screen") }
         let visible = screen.visibleFrame
-        XCTAssertEqual(w.frame.maxX,
-                       visible.maxX - 24,         // matches placeBottomRight margin
-                       accuracy: 0.5,
-                       "Window's right edge should sit 24pt inside the visible right")
-        XCTAssertEqual(w.frame.minY,
-                       visible.minY + 24,
-                       accuracy: 0.5)
+        XCTAssertEqual(w.frame.maxX, visible.maxX - 16, accuracy: 0.5)
+        XCTAssertEqual(w.frame.minY, visible.minY + 32, accuracy: 0.5)
     }
 
-    /// I4: 靠边站 → ⬆ snaps the window to the top edge.
+    /// I4 top: window's top edge flush with the visible-top (cling pose).
     func test_I4_snapTop() {
         let w = PetWindow()
         guard let screen = NSScreen.main else { return XCTFail("no screen") }
         let visible = screen.visibleFrame
         w.snap(to: .top)
-        XCTAssertEqual(w.frame.maxY, visible.maxY - w.snapMargin, accuracy: 0.5)
+        XCTAssertEqual(w.frame.maxY, visible.maxY, accuracy: 0.5,
+                       "snap(.top) should put the window's top flush with screen top")
     }
 
-    func test_I4_snapLeft() {
+    /// I4 left: half the window is pushed past the visible-left edge.
+    func test_I4_snapLeft_pushesHalfOffscreen() {
         let w = PetWindow()
         guard let screen = NSScreen.main else { return XCTFail("no screen") }
         let visible = screen.visibleFrame
         w.snap(to: .left)
-        XCTAssertEqual(w.frame.minX, visible.minX + w.snapMargin, accuracy: 0.5)
+        let expectedX = visible.minX - w.frame.size.width / 2
+        XCTAssertEqual(w.frame.minX, expectedX, accuracy: 0.5,
+                       "snap(.left) should push half the window past the left edge for the peek effect")
     }
 
-    func test_I4_snapRight() {
+    /// I4 right: half the window is pushed past the visible-right edge.
+    func test_I4_snapRight_pushesHalfOffscreen() {
         let w = PetWindow()
         guard let screen = NSScreen.main else { return XCTFail("no screen") }
         let visible = screen.visibleFrame
         w.snap(to: .right)
-        XCTAssertEqual(w.frame.maxX, visible.maxX - w.snapMargin, accuracy: 0.5)
+        let expectedX = visible.maxX - w.frame.size.width / 2
+        XCTAssertEqual(w.frame.minX, expectedX, accuracy: 0.5,
+                       "snap(.right) should push half the window past the right edge for the peek effect")
     }
 
     // MARK: - Z. Invariants

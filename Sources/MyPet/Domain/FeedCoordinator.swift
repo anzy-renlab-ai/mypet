@@ -39,7 +39,11 @@ final class FeedCoordinator: ObservableObject {
 
     var cooldownSeconds: TimeInterval = 60
     var excitedOverlaySeconds: TimeInterval = 3
-    var tipDisplaySeconds: TimeInterval = 8
+    /// How long a tip stays on screen before auto-dismissing.
+    /// User preference: stays put until clicked. 10 minutes is the safety
+    /// net — long enough to read any reasonable tip without worry of it
+    /// vanishing while you read; short enough to not pile up across feeds.
+    var tipDisplaySeconds: TimeInterval = 600
     var sleepyAfter: TimeInterval = 2 * 3600
     var hungryAfter: TimeInterval = 24 * 3600
 

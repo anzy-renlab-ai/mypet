@@ -107,18 +107,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 await self?.coordinator.feed()
             }
         }
-        // Single click while a tip bubble is visible → dismiss the tip.
-        // SwiftUI's onTapGesture can't fire with ignoresMouseEvents=true,
-        // so the dismiss tap has to be routed through MouseMonitor instead.
+        // Single click while a tip bubble is visible → copy tip text to the
+        // clipboard, then dismiss. SwiftUI's onTapGesture can't fire with
+        // ignoresMouseEvents=true so this dismiss path lives in MouseMonitor.
         // The click still passes through to whatever app is behind us
-        // (acceptable side-effect; ignoring it would require Accessibility).
+        // (acceptable; suppressing it would need Accessibility).
         monitor.onSingleClick = { [weak self] _ in
             guard let self else { return }
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                if self.coordinator.tip != nil {
-                    self.coordinator.dismissTip()
-                }
+                guard let self, let tip = self.coordinator.tip else { return }
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.setString(tip, forType: .string)
+                self.coordinator.dismissTip()
             }
         }
         mouseMonitor = monitor

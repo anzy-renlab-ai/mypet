@@ -55,11 +55,10 @@ struct TurtleView: View {
         let t = date.timeIntervalSinceReferenceDate
 
         ZStack {
-            // Only particle effect remaining outside the cat — sprite-baked
-            // overlays (zZz, ♡, ✨) already exist inside each frame's drawing.
-            if state == .eating || state == .excited {
-                ParticleField(at: t, state: state).allowsHitTesting(false)
-            }
+            // Particle overlays (lightning / sparkles / fish bones) removed
+            // per user feedback — 吃东西时不要那些乱七八糟. The APNG itself
+            // carries the eating motion; layering particles on top reads as
+            // noisy.
 
             VStack(spacing: 2) {
                 Spacer(minLength: 0)
@@ -155,14 +154,11 @@ struct CuteCatFace: View {
                 )
                 .rotationEffect(.degrees(m.tilt), anchor: .bottom)
                 .offset(x: m.dx, y: m.dy + Self.baseDy(for: state))
-                // Cross-fade between states (0.5s) — outgoing APNG fades while
-                // incoming APNG fades in. The brief overlap softens the cut
-                // when the previous video's end pose doesn't match the next
-                // video's start pose.
-                .transition(.opacity)
+                // No cross-fade — the user reported the cat "disappearing"
+                // between states, which was the overlap window of two
+                // half-opaque APNGs. Snap state transitions instead.
                 .id(state)
         }
-        .animation(.easeInOut(duration: 0.5), value: state)
         // Play the matching m4a once on state change (no-op if no audio shipped).
         .onChange(of: state) { newState in
             CatAudio.shared.playIfChanged(stateKey: newState.rawValue)
@@ -197,38 +193,15 @@ struct CuteCatFace: View {
         }
     }
 
-    /// Procedural micro-motion overlay. **Uniform scale only** (sx == sy) so
-    /// the bundled APNG's aspect ratio is preserved — anything else squashes
-    /// or stretches the kitten visibly. The APNG itself carries all the
-    /// visible motion; this layer just adds tiny living energy + a touch
-    /// of position offset / tilt.
+    /// Procedural micro-motion overlay. Kept as an identity transform —
+    /// the bundled APNGs already carry every visible motion (chomp, sway,
+    /// breath, hang, tilt) and adding more on top reads as noise + can
+    /// push the sprite outside the window. The function survives as a
+    /// shape so future per-state polish can plug in here, but ships a
+    /// no-op for now.
     private func microMotion() -> (s: CGFloat, tilt: Double, dx: CGFloat, dy: CGFloat) {
-        switch state {
-        case .idle:
-            return (1.0 + CGFloat(sin(t * 1.2)) * 0.008, sin(t * 0.5) * 0.5, 0, 0)
-        case .eating:
-            let chomp = CGFloat(abs(sin(t * 5.5)))
-            return (1.0 + chomp * 0.01, 0, 0, -chomp * 1.0)
-        case .excited:
-            let bounce = CGFloat(abs(sin(t * 3.8)))
-            return (1.0 + bounce * 0.02, 0, 0, -bounce * 5)
-        case .purring:
-            return (1.0 + CGFloat(sin(t * 2.6)) * 0.010, 0, 0, 0)
-        case .sleepy, .dozing:
-            return (1.0 + CGFloat(sin(t * 0.7)) * 0.006, sin(t * 0.35) * 1.0 - 2, 0, 0)
-        case .sleeping:
-            return (1.0 + CGFloat(sin(t * 0.5)) * 0.008, -4, 0, 0)
-        case .hungry:
-            return (1.0, sin(t * 0.5) * 0.5, sin(t * 0.9) * 1.5, 0)
-        case .clingTop:
-            return (1.0, sin(t * 1.4) * 6, 0, 0)
-        case .peekLeft, .peekRight:
-            return (1.0, sin(t * 1.1) * 1.2, 0, 0)
-        case .petting:
-            return (1.0 + CGFloat(sin(t * 2.0)) * 0.008, sin(t * 0.7) * 1.0 + 4, 0, 0)
-        case .licking, .washing:
-            return (1.0 + CGFloat(sin(t * 1.0)) * 0.005, 0, 0, 0)
-        }
+        _ = t
+        return (1.0, 0, 0, 0)
     }
 
 }
@@ -278,58 +251,6 @@ private struct FollowingToken: View {
                 x: CGFloat(sin(t * 1.7)) * 1.5,
                 y: CGFloat(sin(t * 2.4)) * 2.5
             )
-        }
-    }
-}
-
-// MARK: - Particles (chomp / sparkle)
-
-private struct ParticleField: View {
-    let at: TimeInterval
-    let state: PetState
-
-    var body: some View {
-        Canvas { ctx, size in
-            for p in particleSpec() {
-                let cycle = (at * p.speed + p.phase).truncatingRemainder(dividingBy: 1.0)
-                let alpha = 1.0 - cycle
-                // Particles drift upward from above the cat (not across the face)
-                let baseY = size.height * 0.25
-                let yOffset = -CGFloat(cycle) * size.height * 0.35
-                ctx.draw(
-                    Text(p.glyph).font(.system(size: 14, weight: .bold))
-                        .foregroundColor(color.opacity(alpha)),
-                    at: CGPoint(x: size.width * CGFloat(p.x),
-                                y: baseY + yOffset)
-                )
-            }
-        }
-    }
-
-    private var color: Color {
-        state == .excited
-            ? Color(red: 1.00, green: 0.78, blue: 0.30)
-            : Color(red: 1.0, green: 0.62, blue: 0.40)
-    }
-
-    private struct Particle { let x: Double; let phase: Double; let speed: Double; let glyph: String }
-
-    private func particleSpec() -> [Particle] {
-        switch state {
-        case .eating:
-            return [
-                .init(x: 0.25, phase: 0.0, speed: 0.7, glyph: "🐟"),
-                .init(x: 0.55, phase: 0.4, speed: 0.7, glyph: "✨"),
-                .init(x: 0.80, phase: 0.7, speed: 0.7, glyph: "🐟"),
-            ]
-        case .excited:
-            return [
-                .init(x: 0.20, phase: 0.0, speed: 1.0, glyph: "✦"),
-                .init(x: 0.40, phase: 0.25, speed: 1.0, glyph: "✧"),
-                .init(x: 0.60, phase: 0.50, speed: 1.0, glyph: "★"),
-                .init(x: 0.80, phase: 0.75, speed: 1.0, glyph: "✦"),
-            ]
-        default: return []
         }
     }
 }

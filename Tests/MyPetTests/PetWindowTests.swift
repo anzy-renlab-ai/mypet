@@ -132,15 +132,14 @@ final class PetWindowTests: XCTestCase {
             "Closer edge (bottom) should win the snap")
     }
 
-    func test_placeBottomRight_respects24ptMargin() {
+    func test_placeBottomRight_flushWithDockTop() {
         let w = PetWindow()
         w.placeBottomRight()
-        guard let screen = NSScreen.main else {
-            return XCTFail("No main screen for test")
-        }
-        let visible = screen.visibleFrame
-        let expectedX = visible.maxX - PetWindow.compactSize.width - 24
-        let expectedY = visible.minY + 24
+        guard let s = NSScreen.main else { return XCTFail("No main screen") }
+        let visible = s.visibleFrame
+        // 16pt right inset, 0 bottom inset (cat "standing on" the dock area).
+        let expectedX = visible.maxX - PetWindow.compactSize.width - 16
+        let expectedY = visible.minY + 32
         XCTAssertEqual(w.frame.origin.x, expectedX, accuracy: 0.5)
         XCTAssertEqual(w.frame.origin.y, expectedY, accuracy: 0.5)
     }

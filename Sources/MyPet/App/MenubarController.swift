@@ -73,7 +73,7 @@ final class MenubarController: NSObject {
         let menu = NSMenu()
 
         let feedItem = NSMenuItem(
-            title: "Feed now",
+            title: L10n.t("Feed now", "立即喂猫"),
             action: #selector(feedNow),
             keyEquivalent: ""
         )
@@ -81,9 +81,13 @@ final class MenubarController: NSObject {
         menu.addItem(feedItem)
 
         // Recent tips submenu — populated lazily on open
-        let recentParent = NSMenuItem(title: "Recent tips", action: nil, keyEquivalent: "")
-        let recentSubmenu = NSMenu(title: "Recent tips")
-        let placeholder = NSMenuItem(title: "(载入中…)", action: nil, keyEquivalent: "")
+        let recentTitle = L10n.t("Recent tips", "最近的 tip")
+        let recentParent = NSMenuItem(title: recentTitle, action: nil, keyEquivalent: "")
+        let recentSubmenu = NSMenu(title: recentTitle)
+        let placeholder = NSMenuItem(
+            title: L10n.t("(loading…)", "(载入中…)"),
+            action: nil, keyEquivalent: ""
+        )
         placeholder.isEnabled = false
         recentSubmenu.addItem(placeholder)
         recentSubmenu.delegate = self
@@ -91,7 +95,7 @@ final class MenubarController: NSObject {
         menu.addItem(recentParent)
 
         let bringItem = NSMenuItem(
-            title: "把小猫拽到这块屏",
+            title: L10n.t("Bring cat to this screen", "把小猫拽到这块屏"),
             action: #selector(bringHere),
             keyEquivalent: ""
         )
@@ -100,14 +104,16 @@ final class MenubarController: NSObject {
 
         // Snap-to-edge submenu — the click-through window can't be dragged,
         // so this is how the user triggers the spatial states.
-        let snapParent = NSMenuItem(title: "靠边站", action: nil, keyEquivalent: "")
-        let snapMenu = NSMenu(title: "靠边站")
-        for (label, edge) in [
-            ("⬆ 挂屏顶 (clingTop)", PetWindow.Edge.top),
-            ("⬅ 左边探出 (peekLeft)", PetWindow.Edge.left),
-            ("➡ 右边探出 (peekRight)", PetWindow.Edge.right),
-            ("⬇ 回到右下角", PetWindow.Edge.bottom),
-        ] {
+        let snapTitle = L10n.t("Snap to edge", "靠边站")
+        let snapParent = NSMenuItem(title: snapTitle, action: nil, keyEquivalent: "")
+        let snapMenu = NSMenu(title: snapTitle)
+        let snapItems: [(String, PetWindow.Edge)] = [
+            (L10n.t("⬆ Cling to top",       "⬆ 挂屏顶 (clingTop)"), .top),
+            (L10n.t("⬅ Peek from left",     "⬅ 左边探出 (peekLeft)"), .left),
+            (L10n.t("➡ Peek from right",    "➡ 右边探出 (peekRight)"), .right),
+            (L10n.t("⬇ Back to bottom-right", "⬇ 回到右下角"), .bottom),
+        ]
+        for (label, edge) in snapItems {
             let item = NSMenuItem(title: label, action: #selector(snapTo(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = edge
@@ -119,7 +125,9 @@ final class MenubarController: NSObject {
         menu.addItem(.separator())
 
         let loginToggle = NSMenuItem(
-            title: LoginItem.isEnabled() ? "✓ 开机自启" : "开机自启",
+            title: LoginItem.isEnabled()
+                ? L10n.t("✓ Launch at login", "✓ 开机自启")
+                : L10n.t("Launch at login", "开机自启"),
             action: #selector(toggleLogin),
             keyEquivalent: ""
         )
@@ -127,7 +135,7 @@ final class MenubarController: NSObject {
         menu.addItem(loginToggle)
 
         let aboutItem = NSMenuItem(
-            title: "重新设置…",
+            title: L10n.t("Reconfigure…", "重新设置…"),
             action: #selector(showOnboarding),
             keyEquivalent: ""
         )
@@ -137,7 +145,7 @@ final class MenubarController: NSObject {
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
-            title: "Quit mypet",
+            title: L10n.t("Quit mypet", "退出 mypet"),
             action: #selector(quit),
             keyEquivalent: "q"
         )

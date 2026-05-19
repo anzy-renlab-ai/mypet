@@ -8,3 +8,4 @@ xcuserdata/
 .gstack/
 .agents/
 skills-lock.json
+.vercel/
