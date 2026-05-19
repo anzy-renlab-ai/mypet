@@ -48,8 +48,8 @@ struct AnimatedCatView: NSViewRepresentable {
     /// Try APNG first, fall back to PNG, and finally fall back to cat-idle
     /// if neither exists. Ensures the cat is NEVER invisible — a missing
     /// state-specific asset (e.g. during a pipeline regeneration) just
-    /// shows the idle pose instead of a blank window.
-    private func loadImage() -> NSImage? {
+    /// shows the idle pose instead of a blank window. Visible for tests.
+    func loadImage() -> NSImage? {
         let candidates: [URL?] = [
             Bundle.module.url(forResource: resourceName, withExtension: "apng"),
             Bundle.module.url(forResource: resourceName, withExtension: "png"),

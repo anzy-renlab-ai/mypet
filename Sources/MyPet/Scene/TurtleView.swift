@@ -87,7 +87,12 @@ struct TurtleView: View {
     /// Whether the cursor-following cookie may render given the current state.
     /// Restful / sleep / mood states allow it (user can feed any time). The
     /// active feed cycle hides it.
-    private var cookieAllowed: Bool {
+    private var cookieAllowed: Bool { Self.cookieAllowed(in: state) }
+
+    /// Pure decision: should the cursor-following cookie be allowed in a
+    /// given pet state? Active feed / edge / engagement states hide it;
+    /// restful states show it. Exposed for tests.
+    static func cookieAllowed(in state: PetState) -> Bool {
         switch state {
         case .eating, .excited, .purring,
              .clingTop, .peekLeft, .peekRight,
