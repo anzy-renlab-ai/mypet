@@ -205,16 +205,16 @@ function Hero({ onHeartBurst }) {
 
 // ---------- Mood Gallery ----------
 const MOODS = [
-  { key: 'idle',     name: 'Idle',     img: STILLS.idle,     bg: '#FFE4EA', time: '08:14', speech: 'hi!' },
-  { key: 'hungry',   name: 'Hungry',   img: STILLS.hungry,   bg: '#FFE9D2', time: '12:00', speech: 'feed me?' },
-  { key: 'eating',   name: 'Eating',   img: STILLS.eating,   bg: '#F6E8CF', time: '12:04', speech: 'om nom' },
-  { key: 'petting',  name: 'Petting',  img: STILLS.petting,  bg: '#FFC8D3', time: '14:22', speech: '♥' },
-  { key: 'purring',  name: 'Purring',  img: STILLS.purring,  bg: '#FFE4EA', time: '14:30', speech: 'prrrr' },
-  { key: 'peek',     name: 'Peeking',  img: STILLS.peekRight,bg: '#BFE1F0', time: '16:08', speech: 'boo!' },
-  { key: 'cling',    name: 'Hanging',  img: STILLS.clingTop, bg: '#B6D7A8', time: '17:45', speech: 'wheee' },
-  { key: 'sleepy',   name: 'Sleepy',   img: STILLS.sleepy,   bg: '#F6E8CF', time: '21:18', speech: 'yawn~' },
-  { key: 'dozing',   name: 'Dozing',   img: STILLS.dozing,   bg: '#FFE9D2', time: '22:30', speech: 'zzz' },
-  { key: 'sleeping', name: 'Snoozing', img: STILLS.sleeping, bg: '#FFE4EA', time: '03:00', speech: 'zzz...' },
+  { key: 'idle',     name: 'Idle',     img: CATS.idle,     bg: '#FFE4EA', time: '08:14', speech: 'hi!' },
+  { key: 'hungry',   name: 'Hungry',   img: CATS.hungry,   bg: '#FFE9D2', time: '12:00', speech: 'feed me?' },
+  { key: 'eating',   name: 'Eating',   img: CATS.eating,   bg: '#F6E8CF', time: '12:04', speech: 'om nom' },
+  { key: 'petting',  name: 'Petting',  img: CATS.petting,  bg: '#FFC8D3', time: '14:22', speech: '♥' },
+  { key: 'purring',  name: 'Purring',  img: CATS.purring,  bg: '#FFE4EA', time: '14:30', speech: 'prrrr' },
+  { key: 'peek',     name: 'Peeking',  img: CATS.peekRight,bg: '#BFE1F0', time: '16:08', speech: 'boo!' },
+  { key: 'cling',    name: 'Hanging',  img: CATS.clingTop, bg: '#B6D7A8', time: '17:45', speech: 'wheee' },
+  { key: 'sleepy',   name: 'Sleepy',   img: CATS.sleepy,   bg: '#F6E8CF', time: '21:18', speech: 'yawn~' },
+  { key: 'dozing',   name: 'Dozing',   img: CATS.dozing,   bg: '#FFE9D2', time: '22:30', speech: 'zzz' },
+  { key: 'sleeping', name: 'Snoozing', img: CATS.sleeping, bg: '#FFE4EA', time: '03:00', speech: 'zzz...' },
 ];
 
 function MoodCard({ mood, featured, onSpeak }) {
@@ -285,7 +285,7 @@ function Features() {
           </p>
           <span className="feat-stat">◉ zero CPU when idle · click-through</span>
           <div className="feat-illustration">
-            <PosterCat stateKey="clingTop" alt="Cat hanging from top" />
+            <PosterCat stateKey="clingTop" alwaysAnimate alt="Cat hanging from top" />
           </div>
         </div>
 
@@ -294,7 +294,7 @@ function Features() {
           <h3>14 moods that earn themselves.</h3>
           <p>Idle 5 min → sleepy. 15 → dozing. 30 → curled up sleeping. 24 h no feed → quietly hungry. Sleep progression is a passive decay — never a popup.</p>
           <div className="feat-illustration">
-            <PosterCat stateKey="sleepy" alt="Sleepy cat" />
+            <PosterCat stateKey="sleepy" alwaysAnimate alt="Sleepy cat" />
           </div>
         </div>
 
@@ -303,13 +303,13 @@ function Features() {
           <h3>Double-click. She eats a Claude-cookie. A tip bubbles up.</h3>
           <p>Runs <code>claude -p</code> with one of six prompt themes (☕ tip / 💡 prompt / 📰 news / 🤓 TIL / 😆 joke / 🥟 doggerel). Click the bubble to copy the text.</p>
           <div className="feat-illustration">
-            <PosterCat stateKey="eating" alt="Eating cat" />
+            <PosterCat stateKey="eating" alwaysAnimate alt="Eating cat" />
           </div>
         </div>
 
         <div className="feature wide">
           <div className="feat-side-img">
-            <PosterCat stateKey="petting" alt="Petting cat" />
+            <PosterCat stateKey="petting" alwaysAnimate alt="Petting cat" />
           </div>
           <div style={{flex: 1}}>
             <div className="feat-num">04 — petting</div>
@@ -350,7 +350,7 @@ function HowItWorks() {
         <div className="step">
           <div className="step-num">2</div>
           <div className="step-visual" style={{background:'#FFE9D2'}}>
-            <PosterCat stateKey="idle" alt="" />
+            <PosterCat stateKey="idle" alwaysAnimate alt="" />
           </div>
           <h4>Open the box</h4>
           <p>Drag mypet to Applications. Launch. Your new kitten appears with a tiny "mrrp".</p>
@@ -358,7 +358,7 @@ function HowItWorks() {
         <div className="step">
           <div className="step-num">3</div>
           <div className="step-visual" style={{background:'#B6D7A8'}}>
-            <PosterCat stateKey="purring" alt="" />
+            <PosterCat stateKey="purring" alwaysAnimate alt="" />
           </div>
           <h4>That's it</h4>
           <p>She lives there now. Optional: name her. Optional: feel things again.</p>
@@ -389,7 +389,7 @@ function DemoStrip() {
             <div className="icon i2"></div>
             <div className="icon i3"></div>
           </div>
-          <img loading="lazy" decoding="async" className="walk-cat" src={STILLS.idle} alt="" />
+          <img loading="lazy" decoding="async" className="walk-cat" src={CATS.idle} alt="" />
         </div>
       </div>
     </section>
@@ -473,10 +473,10 @@ function FinalCTA({ onHeartBurst }) {
   return (
     <section>
       <div className="cta-final">
-        <img loading="lazy" decoding="async" className="floating-cat f1" src={STILLS.peekRight} alt="" />
-        <img loading="lazy" decoding="async" className="floating-cat f2" src={STILLS.idle} alt="" />
-        <img loading="lazy" decoding="async" className="floating-cat f3" src={STILLS.purring} alt="" />
-        <img loading="lazy" decoding="async" className="floating-cat f4" src={STILLS.sleepy} alt="" />
+        <img loading="lazy" decoding="async" className="floating-cat f1" src={CATS.peekRight} alt="" />
+        <img loading="lazy" decoding="async" className="floating-cat f2" src={CATS.idle} alt="" />
+        <img loading="lazy" decoding="async" className="floating-cat f3" src={CATS.purring} alt="" />
+        <img loading="lazy" decoding="async" className="floating-cat f4" src={CATS.sleepy} alt="" />
         <h2>Your screen is too lonely.<br/>Adopt a kitten.</h2>
         <p>Open source. macOS 13+. MIT license. Spends your existing Claude Code quota — no separate API key.</p>
         <a className="btn-primary"
