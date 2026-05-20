@@ -8,8 +8,11 @@ on:
 
 jobs:
   test:
-    name: swift test (macOS 13)
-    runs-on: macos-13
+    name: swift test
+    # macos-13 is being deprecated by GitHub Actions and was queueing for
+    # 15+ minutes. macos-14 is the current stable runner and builds run
+    # against macOS 13 SDK targets fine.
+    runs-on: macos-14
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -21,4 +24,4 @@ jobs:
         run: swift build
 
       - name: Test
-        run: swift test --enable-code-coverage
+        run: swift test
