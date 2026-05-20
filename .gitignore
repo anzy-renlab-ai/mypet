@@ -9,3 +9,4 @@ xcuserdata/
 .agents/
 skills-lock.json
 .vercel/
+dist/
