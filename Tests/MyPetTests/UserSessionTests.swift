@@ -186,7 +186,7 @@ final class UserSessionTests: XCTestCase {
         c.setEdgeState(.clingTop)
         c.setPetting(true)
         c.triggerGrooming(.licking)
-        let feedCycle: Set<PetState> = [.eating, .excited]
+        let feedCycle: Set<PetState> = [.eating, .excited, .purring]
         XCTAssertTrue(feedCycle.contains(c.state))
         t.cancel()
     }

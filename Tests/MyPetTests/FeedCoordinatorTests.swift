@@ -318,7 +318,7 @@ final class FeedCoordinatorTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 10_000_000)
         // With a sync-fast mock feeder the state can already be eating OR
         // excited by now — the assertion is "we're inside the feed cycle".
-        let feedCycle: Set<PetState> = [.eating, .excited]
+        let feedCycle: Set<PetState> = [.eating, .excited, .purring]
         XCTAssertTrue(feedCycle.contains(coord.state), "Expected feed cycle, got \(coord.state)")
 
         // User drags window to top during the chomp — must NOT override.
@@ -449,7 +449,7 @@ final class FeedCoordinatorTests: XCTestCase {
 
         let task = Task { await coord.feed() }
         try? await Task.sleep(nanoseconds: 10_000_000)
-        let feedCycle: Set<PetState> = [.eating, .excited]
+        let feedCycle: Set<PetState> = [.eating, .excited, .purring]
         XCTAssertTrue(feedCycle.contains(coord.state), "Expected feed cycle, got \(coord.state)")
 
         // Concurrent attacks — all must be no-ops on state
@@ -479,9 +479,13 @@ final class FeedCoordinatorTests: XCTestCase {
 
         // User double-clicks while window is at right edge — feed should fire
         // and override the edge state (feed is the higher precedence event).
+        // Accept any feed-cycle state: GitHub macos-14 runners are faster
+        // than local hardware and frequently land in .purring before the
+        // 10ms sample. The invariant being tested is "no longer peekRight",
+        // not "exactly .eating".
         let task = Task { await coord.feed() }
         try? await Task.sleep(nanoseconds: 10_000_000)
-        let feedCycle: Set<PetState> = [.eating, .excited]
+        let feedCycle: Set<PetState> = [.eating, .excited, .purring]
         XCTAssertTrue(feedCycle.contains(coord.state),
                       "feed() must override an active edge state, got \(coord.state)")
         await task.value
