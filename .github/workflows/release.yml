@@ -89,3 +89,44 @@ jobs:
           generate_release_notes: false
           draft: false
           prerelease: false
+
+      - name: Bump Homebrew tap (version + sha256)
+        # Needs a fine-grained PAT scoped to anzy-renlab-ai/homebrew-tap
+        # with `contents: read+write` set in the repo's Settings →
+        # Secrets and variables → Actions as HOMEBREW_TAP_TOKEN.
+        # Skips silently if the secret isn't set (lets the release ship
+        # even when the tap-bump credential is rotated).
+        if: env.TAP_TOKEN != ''
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -e
+          SHA=$(shasum -a 256 "dist/mypet-${VERSION}-macos.zip" | awk '{print $1}')
+          echo "version=${VERSION} sha=${SHA}"
+
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/anzy-renlab-ai/homebrew-tap.git" tap
+          cd tap
+
+          # Patch version + sha256 in the cask file.
+          sed -i.bak -E "s|version \"[0-9.]+\"|version \"${VERSION}\"|" Casks/mypet.rb
+          sed -i.bak -E "s|sha256 \"[0-9a-f]+\"|sha256 \"${SHA}\"|" Casks/mypet.rb
+          rm Casks/mypet.rb.bak
+
+          # Also patch the version cell in the README table (best-effort).
+          sed -i.bak -E "s|(\| mypet[^|]*\| [^|]*\| )[0-9.]+(\s*\|)|\1${VERSION}\2|" README.md || true
+          rm -f README.md.bak
+
+          if git diff --quiet; then
+            echo "tap already up to date — nothing to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/mypet.rb README.md
+          git commit -m "feat: bump mypet to ${VERSION}
+
+Triggered by https://github.com/anzy-renlab-ai/mypet/releases/tag/v${VERSION}
+"
+          git push origin HEAD:master
