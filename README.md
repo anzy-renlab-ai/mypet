@@ -119,19 +119,37 @@ keeps the last 10 tips under **Recent tips** — click any to copy.
 - [Claude Code CLI](https://docs.anthropic.com/claude-code) on your `PATH`
   (`claude --version` works)
 
-## Install + run
+## Install
+
+### Option A — pre-built `.app` (no toolchain needed)
+
+1. Grab the latest `mypet-x.y.z-macos.zip` from
+   [**Releases**](https://github.com/anzy-renlab-ai/mypet/releases/latest).
+2. Unzip → drag `mypet.app` to `/Applications`.
+3. **First launch only:** macOS Gatekeeper will say *"developer cannot be
+   verified"* because the app is ad-hoc signed (no Apple Developer ID).
+   Right-click `mypet.app` → **Open** → **Open** in the dialog. Or:
+   ```bash
+   xattr -d com.apple.quarantine /Applications/mypet.app
+   ```
+4. Look for the 🐾 paw in your menubar.
+
+### Option B — build from source
 
 ```bash
-git clone https://github.com/<you>/mypet
+git clone https://github.com/anzy-renlab-ai/mypet
 cd mypet
 swift run mypet
 ```
 
-First launch shows a tiny onboarding wizard (detects `claude`, asks about
-launch-at-login, then plays a demo feed).
+### After install
 
-The cat lives in the bottom-right of your primary display. Click-drag it
-anywhere. The 🐾 menu-bar icon gives you `Feed now`, `开机自启`, and quit.
+First launch shows a tiny onboarding wizard (detects `claude`, asks about
+launch-at-login, plays a demo feed).
+
+The cat sits in the bottom-right of your **primary** display. The menubar
+🐾 gives you `Feed now`, `Recent tips`, `Bring cat to this screen`,
+`Snap to edge`, `Launch at login`, and `Quit`.
 
 ## Tests
 

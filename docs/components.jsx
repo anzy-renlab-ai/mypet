@@ -160,13 +160,13 @@ function Hero({ onHeartBurst }) {
           <div className="hero-cta">
             <a
               className="btn-primary"
-              href="https://github.com/anzy-renlab-ai/mypet"
+              href="https://github.com/anzy-renlab-ai/mypet/releases/latest"
               target="_blank"
               rel="noopener"
               onClick={handleDownload}
             >
-              <span>Get it on GitHub</span>
-              <span className="os-tag">macOS 13+ · MIT</span>
+              <span>Download for macOS</span>
+              <span className="os-tag">v0.1 · ~32 MB</span>
             </a>
             <a className="btn-ghost"
               href={KOFI_URL}
