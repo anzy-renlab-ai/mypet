@@ -27,7 +27,8 @@ jobs:
         run: swift --version
 
       - name: Run tests (must pass before shipping)
-        run: swift test
+        # Same skip as ci.yml — ClaudeSubprocessTests needs the real CLI.
+        run: swift test --skip ClaudeSubprocessTests
 
       - name: Build release binary
         run: swift build -c release

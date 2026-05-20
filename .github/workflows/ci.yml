@@ -24,4 +24,6 @@ jobs:
         run: swift build
 
       - name: Test
-        run: swift test
+        # ClaudeSubprocessTests needs the real `claude` CLI on PATH, which
+        # GitHub runners don't have. Locally these pass; on CI we skip them.
+        run: swift test --skip ClaudeSubprocessTests
