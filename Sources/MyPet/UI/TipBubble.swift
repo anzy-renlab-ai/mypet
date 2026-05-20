@@ -18,14 +18,15 @@ struct TipBubble: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(copied ? "已复制" : text)
+            Text(copied ? L10n.t("copied!", "已复制") : text)
                 .font(.system(size: 13, weight: .regular, design: .rounded))
                 .foregroundColor(Color(red: 0.14, green: 0.14, blue: 0.16))
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.top, 14)
+                .padding(.bottom, 28) // room for the token/hint row below
                 .frame(maxWidth: 300)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -36,36 +37,56 @@ struct TipBubble: View {
                         )
                         .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 3)
                 )
+                // Theme chip (top-left)
                 .overlay(alignment: .topLeading) {
                     if let badge = themeBadge {
                         HStack(spacing: 3) {
-                            Text(badge.emoji).font(.system(size: 10))
+                            Text(badge.emoji).font(.system(size: 11))
                             Text(badge.label)
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundColor(badge.tint)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule().fill(badge.tint.opacity(0.15))
-                        )
-                        .offset(x: -4, y: -7)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(badge.tint.opacity(0.15)))
+                        .offset(x: -4, y: -8)
                     }
                 }
+                // Close-hint chip (top-right) — visual cue that any click
+                // copies + dismisses (the window is click-through so an
+                // actual button can't fire). Stays even when no tokens.
                 .overlay(alignment: .topTrailing) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(L10n.t("click to copy", "点击复制"))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(Color(red: 0.45, green: 0.30, blue: 0.20))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color(red: 1.00, green: 0.78, blue: 0.30).opacity(0.22)))
+                    .offset(x: 4, y: -8)
+                }
+                // Token count chip (bottom-right inside the bubble) — bigger
+                // + clearer than the old "🐟 150t" version which was tiny
+                // and easy to miss.
+                .overlay(alignment: .bottomTrailing) {
                     if let n = tokens, n > 0 {
-                        HStack(spacing: 2) {
-                            Text("🐟").font(.system(size: 10))
-                            Text("\(n)t")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        let label = n == 1
+                            ? L10n.t("1 token", "1 token")
+                            : L10n.t("\(n) tokens", "\(n) tokens")
+                        HStack(spacing: 4) {
+                            Text("🐟").font(.system(size: 12))
+                            Text(label)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                 .foregroundColor(Color(red: 0.45, green: 0.30, blue: 0.20))
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule().fill(Color(red: 1.00, green: 0.78, blue: 0.30).opacity(0.20))
-                        )
-                        .offset(x: 4, y: -7)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color(red: 1.00, green: 0.78, blue: 0.30).opacity(0.22)))
+                        .padding(.trailing, 10)
+                        .padding(.bottom, 6)
                     }
                 }
 
@@ -93,8 +114,8 @@ struct TipBubble: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("猫说: \(text)")
-        .accessibilityHint("点击复制到剪贴板并关闭")
+        .accessibilityLabel(L10n.t("cat says: \(text)", "猫说: \(text)"))
+        .accessibilityHint(L10n.t("Click to copy and dismiss", "点击复制到剪贴板并关闭"))
     }
 
     private func copyToPasteboard(_ s: String) {

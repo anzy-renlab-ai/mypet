@@ -85,17 +85,13 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
-        // Edge-state evaluation runs on every move tick — cheap and lets the
-        // menubar snap actions transition the cat into clingTop/peekLeft/
-        // peekRight as soon as the window arrives.
-        //
-        // NOTE: the old `snapDebounce → snapToNearestEdgeIfClose()` pass was
-        // removed. It existed back when the window was user-draggable, but
-        // with `ignoresMouseEvents = true` the user can't drag at all — and
-        // it was firing on every internal setFrame (e.g. tip-bubble expand),
-        // visibly shifting the cat right after a feed double-click. Dead
-        // code now; the menubar snap actions move the window directly.
-        evaluateEdgeState()
+        // Intentionally empty. Edge-state detection used to live here, but
+        // every internal `setFrame` (e.g. tip-bubble expansion) was firing
+        // it spuriously — when the window grew to 400 wide its right edge
+        // landed inside the 32pt edgeStateThreshold, which then snapped the
+        // cat into `peekRight` mid-feed. The user could not have moved the
+        // window themselves (ignoresMouseEvents=true), so edge transitions
+        // are now driven exclusively from menubar `snap(to:)` calls.
     }
 
     /// Inspect distance to each screen edge and notify a state transition
