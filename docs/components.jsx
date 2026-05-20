@@ -165,8 +165,8 @@ function Hero({ onHeartBurst }) {
               rel="noopener"
               onClick={handleDownload}
             >
-              <span>Download for macOS</span>
-              <span className="os-tag">v0.1 · ~32 MB</span>
+              <span>Install via Homebrew</span>
+              <span className="os-tag">brew --cask · macOS 13+</span>
             </a>
             <a className="btn-ghost"
               href={KOFI_URL}
@@ -339,10 +339,12 @@ function HowItWorks() {
       <div className="steps">
         <div className="step">
           <div className="step-num">1</div>
-          <div className="step-visual" style={{background:'#FFE4EA'}}>
-            <span className="mono" style={{fontSize:14,color:'#7A6A5C'}}>git clone · swift run</span>
+          <div className="step-visual" style={{background:'#FFE4EA', textAlign:'center'}}>
+            <span className="mono" style={{fontSize:12,color:'#7A6A5C'}}>brew install --cask</span>
+            <br/>
+            <span className="mono" style={{fontSize:13,color:'#2A1F17',fontWeight:600}}>anzy-renlab-ai/tap/mypet</span>
           </div>
-          <h4>Clone &amp; run</h4>
+          <h4>One brew command</h4>
           <p>macOS 13+. Needs the <code>claude</code> CLI on your PATH. No account, no email, no nonsense.</p>
         </div>
         <div className="step">

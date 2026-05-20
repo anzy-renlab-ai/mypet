@@ -121,20 +121,28 @@ keeps the last 10 tips under **Recent tips** — click any to copy.
 
 ## Install
 
-### Option A — pre-built `.app` (no toolchain needed)
+### Option A — Homebrew (one-liner, recommended)
+
+```bash
+brew install --cask anzy-renlab-ai/tap/mypet
+```
+
+Updates later with `brew upgrade --cask mypet`.
+
+### Option B — pre-built `.app` (manual)
 
 1. Grab the latest `mypet-x.y.z-macos.zip` from
    [**Releases**](https://github.com/anzy-renlab-ai/mypet/releases/latest).
 2. Unzip → drag `mypet.app` to `/Applications`.
-3. **First launch only:** macOS Gatekeeper will say *"developer cannot be
-   verified"* because the app is ad-hoc signed (no Apple Developer ID).
+3. **First launch only:** macOS Gatekeeper will say *"developer cannot
+   be verified"* because the app is ad-hoc signed (no Apple Developer ID).
    Right-click `mypet.app` → **Open** → **Open** in the dialog. Or:
    ```bash
    xattr -d com.apple.quarantine /Applications/mypet.app
    ```
 4. Look for the 🐾 paw in your menubar.
 
-### Option B — build from source
+### Option C — build from source
 
 ```bash
 git clone https://github.com/anzy-renlab-ai/mypet
