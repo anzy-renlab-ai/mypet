@@ -11,10 +11,16 @@
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://www.apple.com/macos)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-AppKit-orange)](https://developer.apple.com/swiftui)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-95%20passing-success)](Tests)
+[![Tests](https://img.shields.io/badge/tests-151%20passing-success)](Tests)
+[![Site](https://img.shields.io/badge/site-mypet.renlab.ai-cc785c)](https://mypet.renlab.ai)
+[![Ko-fi](https://img.shields.io/badge/donate-ko--fi-FF5E5B)](https://ko-fi.com/alvinanziyan)
 
 <p align="center">
-  <img src="docs/screenshots/feed-demo.gif" width="480" alt="hover the cat for 1 second, it chomps and a Claude Code tip pops up">
+  <img src="docs/screenshots/feed-demo.gif" width="240" alt="double-click the cat, she eats a Claude-cookie, a tip pops up">
+</p>
+
+<p align="center">
+  <strong>👉 <a href="https://mypet.renlab.ai">mypet.renlab.ai</a></strong>
 </p>
 
 ## Why
@@ -47,10 +53,14 @@ visual — still zero background work.
 
 ## States
 
+<p align="center">
+  <img src="docs/screenshots/states-grid.png" width="720" alt="10 cat states: idle, eating, purring, hungry, sleepy, dozing, sleeping, clingTop, peekRight, petting">
+</p>
+
 Each state plays its own bundled APNG (3D Pixar-style kitten, generated via
-Kling and cleaned through BiRefNet) with subtle procedural micro-motion on
-top (breath / sway / nod). State transitions cross-fade so consecutive
-APNGs blend instead of cut.
+Kling and cleaned through BiRefNet). The Mac app overlays subtle procedural
+micro-motion only when it adds something — most of the time the APNG carries
+the entire performance.
 
 ### Feedback cycle (user-triggered)
 | State | When | Looks like |
