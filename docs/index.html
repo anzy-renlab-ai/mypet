@@ -3,7 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>mypet — a tiny kitty for your desktop</title>
+
+<!-- Primary SEO -->
+<title>mypet — a desktop cat that feeds on your Claude Code tokens (macOS)</title>
+<meta name="description" content="mypet is a tiny animated cat for your macOS desktop. Feed it a Claude Code token and it purrs back a real coding tip. Free, open-source, zero CPU when idle. Built for Claude Code and AI developers." />
+<meta name="keywords" content="mypet, desktop pet macOS, desktop cat, Claude Code, Claude Code companion, coding tips, AI coding pet, menu bar cat, SwiftUI desktop pet, open source mac app" />
+<meta name="author" content="renlab.ai" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#cc785c" />
+<link rel="canonical" href="https://mypet.renlab.ai/" />
+
+<!-- Open Graph (Facebook, LinkedIn, iMessage, Slack…) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="mypet" />
+<meta property="og:title" content="mypet — a desktop cat that feeds on your Claude Code tokens" />
+<meta property="og:description" content="A tiny animated kitty for your macOS desktop. Feed it a Claude Code token, get a real coding tip back. Free & open-source." />
+<meta property="og:url" content="https://mypet.renlab.ai/" />
+<meta property="og:image" content="https://mypet.renlab.ai/uploads/cat-idle-still.png" />
+<meta property="og:image:alt" content="A cute pixel kitten sitting on your desktop" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="mypet — a desktop cat that feeds on your Claude Code tokens" />
+<meta name="twitter:description" content="A tiny animated kitty for your macOS desktop. Feed it a Claude Code token, get a real coding tip back. Free & open-source." />
+<meta name="twitter:image" content="https://mypet.renlab.ai/uploads/cat-idle-still.png" />
+
+<!-- Emoji favicon (no extra request) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>" />
+
+<!-- Structured data: helps Google show a rich app result -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "mypet",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "macOS 13+",
+  "description": "A tiny animated desktop cat for macOS. Feed it a Claude Code token and it returns a real coding tip. Zero CPU when idle.",
+  "url": "https://mypet.renlab.ai/",
+  "downloadUrl": "https://github.com/anzy-renlab-ai/mypet",
+  "image": "https://mypet.renlab.ai/uploads/cat-idle-still.png",
+  "softwareVersion": "0.1.2",
+  "license": "https://opensource.org/licenses/MIT",
+  "author": { "@type": "Organization", "name": "renlab.ai", "url": "https://renlab.ai" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -11,6 +58,30 @@
 </head>
 <body>
 <div id="root"></div>
+
+<!-- Crawler / no-JS fallback. Lives outside #root so it never collides with
+     React's createRoot. Search engines and social scrapers that don't run JS
+     still get real, keyword-rich content describing the product. -->
+<noscript>
+    <header>
+      <h1>mypet — a tiny desktop cat that feeds on your Claude Code tokens</h1>
+      <p>mypet is a free, open-source desktop pet for macOS 13+. A small animated
+         kitty sits in the corner of your screen. Feed it one Claude Code token and
+         it purrs back a real, useful coding tip. It stays silent and motionless
+         when you ignore it — zero CPU when idle — so it never gets in your way.</p>
+    </header>
+    <h2>Install</h2>
+    <p>Homebrew: <code>brew install --cask anzy-renlab-ai/tap/mypet</code></p>
+    <p>Or download the latest release from
+       <a href="https://github.com/anzy-renlab-ai/mypet">GitHub</a>.</p>
+    <h2>Why people like it</h2>
+    <ul>
+      <li>Made for Claude Code and AI developers — feeding the cat surfaces a real tip.</li>
+      <li>10 moods: idle, hungry, eating, purring, sleepy, dozing, peeking, hanging, snoozing.</li>
+      <li>Non-intrusive by design: no popups, no random sounds, no attention-grabbing.</li>
+      <li>Native SwiftUI + AppKit, MIT licensed, open source.</li>
+    </ul>
+</noscript>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>

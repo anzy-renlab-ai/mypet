@@ -205,16 +205,18 @@ function Hero({ onHeartBurst }) {
 
 // ---------- Mood Gallery ----------
 const MOODS = [
-  { key: 'idle',     name: 'Idle',     img: CATS.idle,     bg: '#FFE4EA', time: '08:14', speech: 'hi!' },
-  { key: 'hungry',   name: 'Hungry',   img: CATS.hungry,   bg: '#FFE9D2', time: '12:00', speech: 'feed me?' },
-  { key: 'eating',   name: 'Eating',   img: CATS.eating,   bg: '#F6E8CF', time: '12:04', speech: 'om nom' },
-  { key: 'petting',  name: 'Petting',  img: CATS.petting,  bg: '#FFC8D3', time: '14:22', speech: '♥' },
-  { key: 'purring',  name: 'Purring',  img: CATS.purring,  bg: '#FFE4EA', time: '14:30', speech: 'prrrr' },
-  { key: 'peek',     name: 'Peeking',  img: CATS.peekRight,bg: '#BFE1F0', time: '16:08', speech: 'boo!' },
-  { key: 'cling',    name: 'Hanging',  img: CATS.clingTop, bg: '#B6D7A8', time: '17:45', speech: 'wheee' },
-  { key: 'sleepy',   name: 'Sleepy',   img: CATS.sleepy,   bg: '#F6E8CF', time: '21:18', speech: 'yawn~' },
-  { key: 'dozing',   name: 'Dozing',   img: CATS.dozing,   bg: '#FFE9D2', time: '22:30', speech: 'zzz' },
-  { key: 'sleeping', name: 'Snoozing', img: CATS.sleeping, bg: '#FFE4EA', time: '03:00', speech: 'zzz...' },
+  // `stateKey` indexes CATS/STILLS so MoodCard can render a cheap still
+  // poster and swap to the APNG on hover (note peek→peekRight, cling→clingTop).
+  { key: 'idle',     stateKey: 'idle',     name: 'Idle',     bg: '#FFE4EA', time: '08:14', speech: 'hi!' },
+  { key: 'hungry',   stateKey: 'hungry',   name: 'Hungry',   bg: '#FFE9D2', time: '12:00', speech: 'feed me?' },
+  { key: 'eating',   stateKey: 'eating',   name: 'Eating',   bg: '#F6E8CF', time: '12:04', speech: 'om nom' },
+  { key: 'petting',  stateKey: 'petting',  name: 'Petting',  bg: '#FFC8D3', time: '14:22', speech: '♥' },
+  { key: 'purring',  stateKey: 'purring',  name: 'Purring',  bg: '#FFE4EA', time: '14:30', speech: 'prrrr' },
+  { key: 'peek',     stateKey: 'peekRight', name: 'Peeking', bg: '#BFE1F0', time: '16:08', speech: 'boo!' },
+  { key: 'cling',    stateKey: 'clingTop', name: 'Hanging',  bg: '#B6D7A8', time: '17:45', speech: 'wheee' },
+  { key: 'sleepy',   stateKey: 'sleepy',   name: 'Sleepy',   bg: '#F6E8CF', time: '21:18', speech: 'yawn~' },
+  { key: 'dozing',   stateKey: 'dozing',   name: 'Dozing',   bg: '#FFE9D2', time: '22:30', speech: 'zzz' },
+  { key: 'sleeping', stateKey: 'sleeping', name: 'Snoozing', bg: '#FFE4EA', time: '03:00', speech: 'zzz...' },
 ];
 
 function MoodCard({ mood, featured, onSpeak }) {
@@ -230,7 +232,10 @@ function MoodCard({ mood, featured, onSpeak }) {
          onClick={trigger}>
       <div className="speech">{mood.speech}</div>
       <div className="mood-img-wrap" style={{ '--bg': mood.bg, background: mood.bg }}>
-        <img loading="lazy" decoding="async" className="mood-img" src={mood.img} alt={mood.name} />
+        {/* Still poster by default; the featured card animates, the rest
+            swap to APNG on hover — keeps 9 heavy APNGs off the initial load. */}
+        <PosterCat stateKey={mood.stateKey} className="mood-img" alt={mood.name}
+                   alwaysAnimate={featured} />
       </div>
       <div className="mood-label">
         <span className="name">{mood.name}</span>
