@@ -37,9 +37,11 @@ actor FeedLog {
     }
 
     private let url: URL
+    let maxEntries: Int
 
-    init(url: URL) {
+    init(url: URL, maxEntries: Int = FeedLog.defaultMaxEntries) {
         self.url = url
+        self.maxEntries = maxEntries
     }
 
     /// Default production location.
@@ -52,13 +54,15 @@ actor FeedLog {
 
     /// Cap log size to avoid unbounded growth. Oldest entries dropped.
     /// 1000 entries × ~200B JSON ≈ 200KB max — generous for years of use.
-    static let maxEntries: Int = 1000
+    /// Instance-overridable (via init) so tests can exercise the cap with a
+    /// small value instead of paying the O(n²) cost of 1000+ real appends.
+    static let defaultMaxEntries: Int = 1000
 
     func append(_ entry: Entry) async throws {
         var entries = try readUnchecked()
         entries.append(entry)
-        if entries.count > Self.maxEntries {
-            entries = Array(entries.suffix(Self.maxEntries))
+        if entries.count > maxEntries {
+            entries = Array(entries.suffix(maxEntries))
         }
         try persist(entries)
     }
@@ -121,7 +125,12 @@ actor FeedLog {
     private func persist(_ entries: [Entry]) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        // Compact, key-sorted. This file is machine-written on every feed and
+        // only ever machine-read (lastFeedTimestamp / read); there's no user
+        // export, so pretty-printing was pure write-time cost. `.sortedKeys`
+        // kept for stable, diffable output. Re-encoding the whole array per
+        // append is O(n); dropping .prettyPrinted ~halves that cost.
+        encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(entries)
         try data.write(to: url, options: .atomic)
     }

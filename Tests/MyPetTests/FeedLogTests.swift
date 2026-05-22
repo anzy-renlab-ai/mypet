@@ -146,15 +146,18 @@ final class FeedLogTests: XCTestCase {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("mypet-cap-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: tmp) }
-        let log = FeedLog(url: tmp)
-        let n = FeedLog.maxEntries + 50
+        // Small cap so the O(n²) append loop stays fast — the capping logic is
+        // identical at 20 or 1000; only the constant differs.
+        let cap = 20
+        let log = FeedLog(url: tmp, maxEntries: cap)
+        let n = cap + 50
         for i in 0..<n {
             try await log.append(.init(ts: Date(timeIntervalSince1970: TimeInterval(i)),
                                         tip: "t\(i)", exitCode: 0, tokens: 10))
         }
         let entries = try await log.read()
-        XCTAssertEqual(entries.count, FeedLog.maxEntries, "must cap at maxEntries")
-        XCTAssertEqual(entries.first?.tip, "t\(n - FeedLog.maxEntries)",
+        XCTAssertEqual(entries.count, cap, "must cap at maxEntries")
+        XCTAssertEqual(entries.first?.tip, "t\(n - cap)",
                        "oldest entries should be dropped")
         XCTAssertEqual(entries.last?.tip, "t\(n - 1)")
     }

@@ -8,7 +8,9 @@ import SwiftUI
 /// motion (bounce, sway, tilt) + particles + overlay are owned here.
 ///
 /// Invariants preserved:
-/// - Zero CPU when fully idle (TimelineView gated by `needsAnimation`)
+/// - Zero SwiftUI redraw when idle: TimelineView runs only while the
+///   cursor-following cookie shows (`needsAnimation`). APNG playback is
+///   independent of this gate (NSImageView owns its own clock).
 /// - Single-tap to drag, double-tap to feed; no Timer captured in closures
 struct TurtleView: View {
     let state: PetState
@@ -37,10 +39,21 @@ struct TurtleView: View {
     }
 
     var body: some View {
-        // Single TimelineView always running. .animation = 60fps; the cat
-        // micro-motion is procedural so cost is just a few transforms per frame.
-        TimelineView(.animation) { ctx in
-            content(at: ctx.date)
+        // 60fps only when something procedural actually moves. The cat is
+        // APNG-driven (NSImageView animates independently of SwiftUI) and
+        // `microMotion()` is a no-op, so the ONLY per-frame work is the
+        // cursor-following cookie. When no cookie shows, render one static
+        // frame — restores invariant #1 (zero idle CPU / motionless when
+        // ignored). The cookie's transition still animates because the
+        // `needsAnimation` flip drives a body re-render.
+        Group {
+            if needsAnimation {
+                TimelineView(.animation) { ctx in
+                    content(at: ctx.date)
+                }
+            } else {
+                content(at: .now)
+            }
         }
         .contentShape(Rectangle())
         .frame(width: 180, height: 180)
@@ -117,6 +130,20 @@ struct TurtleView: View {
     /// when feed starts (state flips before cursor leaves).
     private var cookieVisibilityKey: Bool {
         !cursorInZone || !cookieAllowed
+    }
+
+    /// Whether the 60fps `TimelineView` is needed this frame. The cat sprite
+    /// animates via APNG (NSImageView, independent clock) and `microMotion()`
+    /// is a no-op, so the cursor-following cookie is the only procedural,
+    /// per-frame motion. No cookie → nothing to drive → static frame.
+    private var needsAnimation: Bool {
+        Self.needsAnimation(state: state, cursorInZone: cursorInZone)
+    }
+
+    /// Pure decision mirroring `cookieAllowed(in:)`, exposed for tests:
+    /// animation is required exactly when the cookie is showing.
+    static func needsAnimation(state: PetState, cursorInZone: Bool) -> Bool {
+        cursorInZone && cookieAllowed(in: state)
     }
 }
 

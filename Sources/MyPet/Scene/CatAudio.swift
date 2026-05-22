@@ -27,19 +27,23 @@ final class CatAudio {
         let url = Bundle.module.url(forResource: "cat-\(stateKey)", withExtension: "m4a")
             ?? Bundle.module.url(forResource: "cat-\(stateKey)", withExtension: "mp3")
         guard let url else {
-            FileHandle.standardError.write("[audio] no asset for \(stateKey)\n".data(using: .utf8)!)
+            log.debug("no asset for \(stateKey, privacy: .public)")
             return
         }
-        FileHandle.standardError.write("[audio] play \(url.lastPathComponent)\n".data(using: .utf8)!)
+        // Stop the previous clip before starting a new one. Without this, a
+        // quick state change (e.g. eating → excited → purring, or edge poses
+        // while dragging) layers a second meow on top of the first — exactly
+        // the attention-grabbing noise the pet is supposed to avoid.
+        player?.stop()
         do {
             let p = try AVAudioPlayer(contentsOf: url)
             p.volume = 1.0
             p.prepareToPlay()
-            let ok = p.play()
-            FileHandle.standardError.write("[audio] play() = \(ok), duration=\(p.duration)\n".data(using: .utf8)!)
+            p.play()
             self.player = p
+            log.debug("play \(url.lastPathComponent, privacy: .public)")
         } catch {
-            FileHandle.standardError.write("[audio] init failed: \(error)\n".data(using: .utf8)!)
+            log.error("init failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

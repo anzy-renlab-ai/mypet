@@ -38,14 +38,21 @@ final class FeedCoordinator: ObservableObject {
     // MARK: - Configuration
 
     var cooldownSeconds: TimeInterval = 60
+    /// How long the "还在消化呢…" cooldown-reject tip stays before clearing.
+    var cooldownTipSeconds: TimeInterval = 2.5
     var excitedOverlaySeconds: TimeInterval = 3
     /// How long a tip stays on screen before auto-dismissing.
     /// User preference: stays put until clicked. 10 minutes is the safety
     /// net — long enough to read any reasonable tip without worry of it
     /// vanishing while you read; short enough to not pile up across feeds.
     var tipDisplaySeconds: TimeInterval = 600
-    var sleepyAfter: TimeInterval = 2 * 3600
-    var hungryAfter: TimeInterval = 24 * 3600
+
+    // Idle-progression cadence (sleepy → dozing → sleeping → hungry) lives in
+    // PetStateMachine, which is the single source of truth. FeedCoordinator
+    // used to also declare `sleepyAfter`/`hungryAfter`, but they were never
+    // passed into the machine — so they did nothing while looking authoritative
+    // (the cat actually went sleepy after the machine's 5 min default, not the
+    // 2 h the dead field advertised). Removed to stop the lie; tune the machine.
 
     // MARK: - Dependencies
 
@@ -175,7 +182,7 @@ final class FeedCoordinator: ObservableObject {
                 let remaining = Int((cooldownSeconds - sinceLast).rounded(.up))
                 Self.log.info("feed rejected: cooldown active (\(remaining)s left)")
                 tip = "还在消化呢，再等 \(remaining) 秒 🐾"
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                try? await Task.sleep(nanoseconds: UInt64(cooldownTipSeconds * 1_000_000_000))
                 tip = nil
                 return
             }
@@ -317,7 +324,13 @@ final class FeedCoordinator: ObservableObject {
         // Map error to a friendly tip bubble (user-facing)
         tip = friendlyMessage(for: error)
 
+        // Guard the auto-dismiss the same way handleSuccess does: only clear if
+        // the tip we set is still the one showing. Without this, a feed that
+        // happens during this window (cooldown-reject tip, or a later success)
+        // gets blanked out when this stale failure timer fires.
+        let pinnedTip = tip
         try? await Task.sleep(nanoseconds: UInt64(tipDisplaySeconds * 1_000_000_000))
+        guard tip == pinnedTip else { return }
         tip = nil
         lastError = nil
         // Hungry stays until next interaction (D11: event-driven, not timed)

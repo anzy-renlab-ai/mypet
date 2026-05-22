@@ -45,7 +45,13 @@ final class UserPathTests: XCTestCase {
         let feeder = FeedCoordinatorTests.MockFeeder(tipResult: .success(tip))
         let c = FeedCoordinator(feeder: feeder, log: feedLog)
         c.excitedOverlaySeconds = 0.05
-        c.tipDisplaySeconds = 30
+        // 0.5s, not 30: tests sample the tip mid-window with ≤0.4s sleeps, so
+        // 0.5s keeps the tip alive for every assertion while a fully-awaited
+        // feed() returns in ~0.55s instead of ~30s (was the D7 long pole).
+        c.tipDisplaySeconds = 0.5
+        // 0.5s reject-tip window: outlasts the ≤0.4s mid-window samples in the
+        // cooldown tests while collapsing the production 2.5s wait.
+        c.cooldownTipSeconds = 0.5
         c.cooldownSeconds = cooldown
         return c
     }
@@ -131,6 +137,7 @@ final class UserPathTests: XCTestCase {
         let c = FeedCoordinator(feeder: feeder, log: feedLog)
         c.excitedOverlaySeconds = 0.05
         c.tipDisplaySeconds = 0.05
+        c.cooldownTipSeconds = 0.05   // t2 may race into the cooldown path; don't wait 2.5s
 
         let t1 = Task { await c.feed() }
         try? await Task.sleep(nanoseconds: 10_000_000)
@@ -219,7 +226,7 @@ final class UserPathTests: XCTestCase {
         let feeder = FeedCoordinatorTests.MockFeeder(result: .failure(.notAuthenticated))
         let c = FeedCoordinator(feeder: feeder, log: feedLog)
         c.excitedOverlaySeconds = 0.05
-        c.tipDisplaySeconds = 5
+        c.tipDisplaySeconds = 0.5   // outlasts the 0.3s assertion below; was 5
         let t = Task { await c.feed() }
         try? await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertEqual(c.state, .hungry)
@@ -468,6 +475,32 @@ final class UserPathTests: XCTestCase {
                   .clingTop, .peekLeft, .peekRight,
                   .petting, .licking, .washing] {
             XCTAssertTrue(TurtleView.cookieAllowed(in: s))
+        }
+    }
+
+    /// Z7: idle-CPU invariant (#1). The 60fps TimelineView must run ONLY when
+    /// the cursor-following cookie is showing — i.e. cursor in zone AND state
+    /// allows the cookie. Idle with no cursor near = no animation = static
+    /// frame. Regressing this re-burns 60fps when the pet is ignored.
+    func test_Z7_needsAnimation_gating() {
+        // Cursor far away → never animate, regardless of state.
+        for s in [PetState.idle, .sleepy, .hungry, .dozing, .sleeping,
+                  .clingTop, .peekLeft, .peekRight, .petting, .licking,
+                  .washing, .eating, .excited, .purring] {
+            XCTAssertFalse(TurtleView.needsAnimation(state: s, cursorInZone: false),
+                           "\(s): no cursor in zone must not animate")
+        }
+        // Cursor near + cookie-allowed state → animate.
+        for s in [PetState.idle, .sleepy, .hungry, .dozing, .sleeping,
+                  .clingTop, .peekLeft, .peekRight,
+                  .petting, .licking, .washing] {
+            XCTAssertTrue(TurtleView.needsAnimation(state: s, cursorInZone: true),
+                          "\(s): cursor near + cookie allowed must animate")
+        }
+        // Cursor near but mid-feed cycle (cookie hidden) → still no animation.
+        for s in [PetState.eating, .excited, .purring] {
+            XCTAssertFalse(TurtleView.needsAnimation(state: s, cursorInZone: true),
+                           "\(s): feed cycle hides cookie, no animation needed")
         }
     }
 }

@@ -244,16 +244,22 @@ final class ClaudeSubprocess {
         // Try to acquire the lock without waiting; if held, report .busy
         let acquired = await runLock.tryAcquire()
         guard acquired else { return .failure(.busy) }
-        defer { Task { await runLock.release() } }
 
+        // Release synchronously before returning. `defer` can't hold `await`,
+        // so the previous `defer { Task { await release() } }` deferred the
+        // release to a later tick — leaving a window where feed() had returned
+        // but the lock was still held, so an immediately-following feed() got
+        // a spurious `.busy`. Releasing inline closes that window.
+        let outcome: Result<FeedSuccess, ClaudeSubprocessError>
         do {
-            let result = try await Self.feedOnce(prompt: prompt)
-            return .success(result)
+            outcome = .success(try await Self.feedOnce(prompt: prompt))
         } catch let err as ClaudeSubprocessError {
-            return .failure(err)
+            outcome = .failure(err)
         } catch {
-            return .failure(.systemError)
+            outcome = .failure(.systemError)
         }
+        await runLock.release()
+        return outcome
     }
 
     /// Calls `claude -p <prompt> --output-format json` and parses the result

@@ -152,8 +152,9 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     enum Edge { case top, right, bottom, left }
 
     /// Explicitly park the cat against one screen edge (menubar action).
-    /// Uses the screen containing the cursor so the snap lands where the
-    /// user is actually looking. Animated.
+    /// Snaps to an edge of the primary display (`NSScreen.main`), matching
+    /// `placeBottomRight()`'s documented user preference that the cat lives on
+    /// the primary screen regardless of cursor location. Animated.
     ///
     /// Behavior per edge:
     ///   .top    — window's top touches screen top; cat hangs down

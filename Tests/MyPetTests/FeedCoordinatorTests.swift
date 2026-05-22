@@ -76,7 +76,7 @@ final class FeedCoordinatorTests: XCTestCase {
         let feeder = MockFeeder(tipResult: .success("a fun tip 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
-        coord.tipDisplaySeconds = 5
+        coord.tipDisplaySeconds = 0.3   // outlasts the 0.25s assertion; was 5
 
         XCTAssertTrue(coord.isFirstFeed)
         let task = Task { await coord.feed() }
@@ -95,7 +95,7 @@ final class FeedCoordinatorTests: XCTestCase {
         let feeder = MockFeeder(tipResult: .success("real tip text 🐾"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
         coord.excitedOverlaySeconds = 0.05
-        coord.tipDisplaySeconds = 5
+        coord.tipDisplaySeconds = 0.3   // outlasts the 0.1s assertion below; was 5
         coord.cooldownSeconds = 0  // disable cooldown for test
 
         await coord.feed() // first → welcome
@@ -150,6 +150,7 @@ final class FeedCoordinatorTests: XCTestCase {
         coord.excitedOverlaySeconds = 0.01
         coord.tipDisplaySeconds = 0.01
         coord.cooldownSeconds = 60
+        coord.cooldownTipSeconds = 0.01   // reject-tip window; no assertion on it here
 
         await coord.feed()
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -169,6 +170,7 @@ final class FeedCoordinatorTests: XCTestCase {
         coord.excitedOverlaySeconds = 0.01
         coord.tipDisplaySeconds = 0.01
         coord.cooldownSeconds = 60
+        coord.cooldownTipSeconds = 0.2   // outlasts the 0.1s mid-flight sample below
 
         // First feed → records timestamp
         await coord.feed()
@@ -282,6 +284,11 @@ final class FeedCoordinatorTests: XCTestCase {
     func test_wake_fromSleepy_returnsIdle() async {
         let feeder = MockFeeder(tipResult: .success("tip"))
         let coord = FeedCoordinator(feeder: feeder, log: feedLog)
+        // Collapse the feed cycle — default tipDisplaySeconds is 600 (10 min),
+        // so awaiting feed() with defaults blocked this test for 603s. It only
+        // smoke-tests that wake() doesn't crash, no timing assertion.
+        coord.excitedOverlaySeconds = 0.01
+        coord.tipDisplaySeconds = 0.01
         // Manually drive into sleepy via the state machine — only public way is
         // evaluateIdle with timestamps in past, which we can't easily mock.
         // We test the wake() pass-through behaviour by feeding and checking state.
