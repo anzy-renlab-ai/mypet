@@ -201,10 +201,15 @@ struct PetRootView: View {
     /// right of the compact window, approximate hit-test radius.
     private var cursorOverCat: Bool {
         guard let p = mouseMonitor.cursorPos else { return false }
-        // Cat center inside the 180×180 window content coords (y-up).
-        let cx: CGFloat = 130, cy: CGFloat = 50
+        // Cat center in window content coords (y-up, origin bottom-left).
+        // Measured against the rendered sprite (196×200 window): the cat is
+        // horizontally centered and bottom-anchored, center ≈ (98, 61), with
+        // head/ears reaching y≈122. The old (130,50) r50 circle sat too low
+        // and to the right — at the cat's x it only reached y≈88, so hovering
+        // the head (the natural place to pet) missed. Centered on the sprite.
+        let cx: CGFloat = 95, cy: CGFloat = 65
         let dx = p.x - cx, dy = p.y - cy
-        return dx * dx + dy * dy <= 50 * 50
+        return dx * dx + dy * dy <= 60 * 60
     }
 
     var body: some View {
