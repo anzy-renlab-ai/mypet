@@ -183,7 +183,7 @@ struct CuteCatFace: View {
                     anchor: .bottom
                 )
                 .rotationEffect(.degrees(m.tilt), anchor: .bottom)
-                .offset(x: m.dx, y: m.dy + Self.baseDy(for: state))
+                .offset(x: m.dx + Self.baseDx(for: state), y: m.dy + Self.baseDy(for: state))
                 // No cross-fade — the user reported the cat "disappearing"
                 // between states, which was the overlap window of two
                 // half-opaque APNGs. Snap state transitions instead.
@@ -220,6 +220,18 @@ struct CuteCatFace: View {
         switch state {
         case .sleeping:  return 20
         default:         return 0
+        }
+    }
+
+    /// Per-state horizontal nudge to keep the cat's body center consistent
+    /// across poses. Measured: the cat's alpha-bbox center sits at ~0.53 of the
+    /// canvas width for every state EXCEPT idle (0.44) — the full-body idle
+    /// sprite includes the tail, which drags its bbox center ~9px left. Nudge
+    /// idle right so it doesn't visibly jump when switching to/from idle.
+    static func baseDx(for state: PetState) -> CGFloat {
+        switch state {
+        case .idle: return 9
+        default:    return 0
         }
     }
 
