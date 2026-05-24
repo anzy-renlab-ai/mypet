@@ -23,6 +23,15 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     convenience init(rootView: AnyView) {
         self.init()
         let host = NSHostingView(rootView: rootView)
+        // CRITICAL (invariant #5): do NOT let the hosting view resize the
+        // window to its SwiftUI content. By default NSHostingView pushes the
+        // content's fitting size back via setContentSize, which (a) fought our
+        // explicit setExpanded sizing — the compact window settled at 196×200
+        // instead of 180×180 — and (b) could runaway: with content using
+        // .frame(maxHeight:.infinity) the measure→resize→remeasure loop blew
+        // the window up to a 3016pt-tall strip, pushing the cat off-screen
+        // ("小猫消失"). Empty sizingOptions makes our setFrame authoritative.
+        host.sizingOptions = []
         host.autoresizingMask = [.width, .height]
         host.frame = NSRect(origin: .zero, size: PetWindow.compactSize)
         contentView = host

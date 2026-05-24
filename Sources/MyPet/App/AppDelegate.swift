@@ -130,6 +130,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let host = NSHostingView(rootView: PetRootView(coordinator: coordinator, mouseMonitor: monitor))
+        // CRITICAL (invariant #5): never let the hosting view drive the window
+        // size. By default NSHostingView pushes its SwiftUI fitting size back
+        // via setContentSize, which fought our explicit setExpanded sizing (the
+        // compact window settled at 196×200 instead of 180×180) and could
+        // runaway — with content using .frame(maxHeight:.infinity) the
+        // measure→resize→remeasure loop blew the window into a ~3016pt-tall
+        // strip, pushing the cat off-screen ("小猫消失"). Empty sizingOptions
+        // makes setExpanded/placeBottomRight authoritative.
+        host.sizingOptions = []
         host.autoresizingMask = [.width, .height]
         host.frame = NSRect(origin: .zero, size: PetWindow.compactSize)
         window.contentView = host
