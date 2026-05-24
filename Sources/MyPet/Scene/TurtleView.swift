@@ -33,7 +33,11 @@ struct TurtleView: View {
     /// to merit drawing the following cookie.
     private var cursorInZone: Bool {
         guard let p = cursorPos else { return false }
-        let cx: CGFloat = 90, cy: CGFloat = 110
+        // clingTop pins the cat to the TOP of the window (high y, origin is
+        // bottom-left y-up), so the approach zone moves up with it. Every
+        // other pose is bottom-anchored.
+        let cx: CGFloat = 90
+        let cy: CGFloat = state == .clingTop ? 132 : 110
         let dx = p.x - cx, dy = p.y - cy
         return dx * dx + dy * dy <= approachRadius * approachRadius
     }
@@ -82,10 +86,21 @@ struct TurtleView: View {
         // 不要那些乱七八糟). t is unused (microMotion is a no-op), so the cat
         // doesn't depend on any clock.
         VStack(spacing: 2) {
-            Spacer(minLength: 0)
-            CuteCatFace(state: state, t: 0)
-                .frame(width: 96, height: 96)
-            Spacer().frame(height: 12)
+            if state == .clingTop {
+                // Hanging from the top edge: pin the (upside-down) sprite to the
+                // TOP of the window so it touches the screen's top edge. The
+                // window is snapped with its top flush to the screen top, and
+                // the cat is normally bottom-anchored — which left it dangling a
+                // whole window-height too low. Top-anchor it for this pose only.
+                CuteCatFace(state: state, t: 0)
+                    .frame(width: 96, height: 96)
+                Spacer(minLength: 0)
+            } else {
+                Spacer(minLength: 0)
+                CuteCatFace(state: state, t: 0)
+                    .frame(width: 96, height: 96)
+                Spacer().frame(height: 12)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

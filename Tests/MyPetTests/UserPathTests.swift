@@ -378,14 +378,15 @@ final class UserPathTests: XCTestCase {
         XCTAssertEqual(w.frame.minY, visible.minY + 32, accuracy: 0.5)
     }
 
-    /// I4 top: window's top edge flush with the visible-top (cling pose).
+    /// I4 top: window's top edge flush with the ABSOLUTE screen top (over the
+    /// menu bar — the cling pose hangs from the real top edge, not the
+    /// visibleFrame top which sits a menu-bar-height below it).
     func test_I4_snapTop() {
         let w = PetWindow()
         guard let screen = NSScreen.main else { return XCTFail("no screen") }
-        let visible = screen.visibleFrame
         w.snap(to: .top)
-        XCTAssertEqual(w.frame.maxY, visible.maxY, accuracy: 0.5,
-                       "snap(.top) should put the window's top flush with screen top")
+        XCTAssertEqual(w.frame.maxY, screen.frame.maxY, accuracy: 0.5,
+                       "snap(.top) should put the window's top flush with the absolute screen top")
     }
 
     /// I4 left: half the window is pushed past the visible-left edge.

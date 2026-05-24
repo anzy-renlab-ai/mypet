@@ -179,10 +179,11 @@ final class PetWindow: NSWindow, NSWindowDelegate {
 
         switch edge {
         case .top:
-            // Top edge flush with screen top; cat sprite (clingTop pose)
-            // is drawn pointing down inside the window.
+            // Hang from the ABSOLUTE screen top (over the menu bar — the window
+            // is .statusBar level). Using visibleFrame.maxY left a menu-bar-
+            // height gap; the cat is supposed to cling to the real top edge.
             f.origin.x = visible.maxX - f.size.width - snapMargin
-            f.origin.y = visible.maxY - f.size.height
+            f.origin.y = s.frame.maxY - f.size.height
         case .left:
             // Half the window pushed past the visible-left edge → only the
             // right half is on-screen → cat appears to peek out from the left.

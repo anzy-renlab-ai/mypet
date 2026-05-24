@@ -231,7 +231,10 @@ struct PetRootView: View {
         // head/ears reaching y≈122. The old (130,50) r50 circle sat too low
         // and to the right — at the cat's x it only reached y≈88, so hovering
         // the head (the natural place to pet) missed. Centered on the sprite.
-        let cx: CGFloat = 95, cy: CGFloat = 65
+        // clingTop pins the cat to the TOP of the window, so the petting zone
+        // tracks it up there; every other pose is bottom-anchored.
+        let cx: CGFloat = 95
+        let cy: CGFloat = coordinator.state == .clingTop ? 132 : 65
         let dx = p.x - cx, dy = p.y - cy
         return dx * dx + dy * dy <= 60 * 60
     }
