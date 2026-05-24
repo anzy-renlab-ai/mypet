@@ -45,10 +45,18 @@ final class MouseMonitor: ObservableObject {
     }
 
     private func install() {
+        // Global event monitors fire on the main run loop, so update state
+        // SYNCHRONOUSLY (assumeIsolated) instead of hopping through a Task.
+        // The Task hop deferred each cursor update by a run-loop tick, which is
+        // exactly the lag that made the follow-cookie trail behind the cursor.
         let movedToken = NSEvent.addGlobalMonitorForEvents(
             matching: [.mouseMoved],
             handler: { [weak self] event in
-                Task { @MainActor [weak self] in self?.handleMouseMoved(event) }
+                if #available(macOS 14.0, *) {
+                    MainActor.assumeIsolated { self?.handleMouseMoved(event) }
+                } else {
+                    Task { @MainActor [weak self] in self?.handleMouseMoved(event) }
+                }
             }
         )
         if let t = movedToken { tokens.append(t) }
@@ -56,7 +64,11 @@ final class MouseMonitor: ObservableObject {
         let downToken = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown],
             handler: { [weak self] event in
-                Task { @MainActor [weak self] in self?.handleMouseDown(event) }
+                if #available(macOS 14.0, *) {
+                    MainActor.assumeIsolated { self?.handleMouseDown(event) }
+                } else {
+                    Task { @MainActor [weak self] in self?.handleMouseDown(event) }
+                }
             }
         )
         if let t = downToken { tokens.append(t) }

@@ -206,8 +206,13 @@ final class FeedCoordinator: ObservableObject {
         machine.startFeed()
         state = .eating
         excited = false
-        tip = nil
         lastError = nil
+        // Pop a "working" bubble immediately. The claude call below can take a
+        // few seconds to ~20s; without this the user double-clicks and sees
+        // nothing happen (no idea it's fetching / spending tokens). The real
+        // tip overwrites this on success. (Token chip stays hidden — lastTokens
+        // is only set on success.)
+        tip = "吃到啦~ 让我想想喵…"
 
         // Pick a fresh theme per feed and route its prompt to the subprocess.
         let theme = Self.nextTheme()

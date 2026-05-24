@@ -608,3 +608,18 @@ section { position: relative; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .nav-links { display: none; }
 }
+
+/* Install prompt block (primary CC install path) */
+.install-prompt {
+  margin: 14px 0 10px;
+  padding: 12px 14px;
+  background: #2A2018;
+  color: #F3E9DD;
+  border-radius: 12px;
+  font: 13px/1.5 "JetBrains Mono", ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 540px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+.install-prompt code { color: inherit; background: none; }

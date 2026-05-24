@@ -61,7 +61,11 @@ struct TurtleView: View {
             if needsAnimation, let pos = cursorPos {
                 TimelineView(.animation) { ctx in
                     FollowingToken(t: ctx.date.timeIntervalSinceReferenceDate)
-                        .position(x: pos.x, y: pos.y)
+                        // cursorPos is window content coords, y-UP from the
+                        // window bottom (AppKit); SwiftUI .position is y-DOWN
+                        // from the top. Flip Y over the 180pt frame so the
+                        // cookie sits AT the cursor instead of mirrored.
+                        .position(x: pos.x, y: 180 - pos.y)
                 }
                 // Appears with a tiny fade; hides INSTANTLY (removal: identity)
                 // so the cookie vanishes the moment a feed starts.

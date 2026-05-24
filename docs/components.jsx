@@ -64,6 +64,10 @@ function Sparkle({ size = 32, color = '#FFB3C1', className = '' }) {
 // back to "—" while loading / on error.
 const REPO_URL = 'https://github.com/anzy-renlab-ai/mypet';
 const KOFI_URL = 'https://ko-fi.com/alvinanziyan';
+// The primary install path: paste this into Claude Code and it installs +
+// launches mypet for you. (mypet is built for CC users — it feeds on your
+// Claude Code tokens, so this is the natural way in.)
+const INSTALL_PROMPT = 'Install mypet — a cute 3D desktop kitten that lives in my screen corner and feeds on Claude Code tokens. Run `brew install --cask anzy-renlab-ai/tap/mypet`, then launch the mypet app. Repo: github.com/anzy-renlab-ai/mypet';
 function GitHubStarBadge() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => {
@@ -158,16 +162,18 @@ function Hero({ onHeartBurst }) {
             a smile.
           </p>
           <div className="hero-cta">
-            <a
+            <button
               className="btn-primary"
-              href="https://github.com/anzy-renlab-ai/mypet/releases/latest"
-              target="_blank"
-              rel="noopener"
-              onClick={handleDownload}
+              onClick={(e) => {
+                navigator.clipboard.writeText(INSTALL_PROMPT);
+                handleDownload && handleDownload(e);
+                const b = e.currentTarget.querySelector('.cta-label');
+                if (b) { const o = b.textContent; b.textContent = '已复制 ✓ 粘贴给 Claude Code'; setTimeout(() => b.textContent = o, 1800); }
+              }}
             >
-              <span>Install via Homebrew</span>
-              <span className="os-tag">brew --cask · macOS 13+</span>
-            </a>
+              <span className="cta-label">Copy the install prompt</span>
+              <span className="os-tag">paste into Claude Code · macOS 13+</span>
+            </button>
             <a className="btn-ghost"
               href={KOFI_URL}
               target="_blank"
@@ -175,11 +181,12 @@ function Hero({ onHeartBurst }) {
               <span>☕</span> Buy me a ko-fi
             </a>
           </div>
-          <div className="hero-meta">
-            <span>🐾 14 cat moods</span>
-            <span>· runs <code>claude -p</code></span>
-            <span>· ~12 MB</span>
-          </div>
+          <pre className="install-prompt"><code>{INSTALL_PROMPT}</code></pre>
+          <p className="hero-meta">
+            <span>Built for <span className="accent">Claude Code</span> users — she eats your CC tokens.</span><br/>
+            <span style={{opacity:0.7}}>No Claude Code yet? Get it first → </span>
+            <a href="https://docs.anthropic.com/claude-code" target="_blank" rel="noopener">claude.com/code</a>
+          </p>
         </div>
 
         <div className="hero-stage" ref={stageRef}>

@@ -130,11 +130,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.onSingleClick = { [weak self] _ in
             guard let self else { return }
             Task { @MainActor [weak self] in
-                guard let self, let tip = self.coordinator.tip else { return }
-                let pb = NSPasteboard.general
-                pb.clearContents()
-                pb.setString(tip, forType: .string)
-                self.coordinator.dismissTip()
+                guard let self else { return }
+                // Cute meow on every click (no-op until cat-meow.m4a exists).
+                CatAudio.shared.playMeow()
+                // If a tip is up, single-click also copies + dismisses it.
+                if let tip = self.coordinator.tip {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(tip, forType: .string)
+                    self.coordinator.dismissTip()
+                }
             }
         }
         mouseMonitor = monitor

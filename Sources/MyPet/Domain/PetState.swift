@@ -66,7 +66,7 @@ struct PetStateMachine {
 
     /// Hungry after this many seconds since last successful feed. Was 24h
     /// (never reachable in a session); 30 min so it shows without nagging.
-    var hungryAfter: TimeInterval = 30 * 60
+    var hungryAfter: TimeInterval = 10 * 60
 
     /// Current base state.
     private(set) var state: PetState = .idle
@@ -81,7 +81,7 @@ struct PetStateMachine {
     private(set) var lastEventAt: Date
     private(set) var lastFeedAt: Date = .distantPast
 
-    init(sleepyAfter: TimeInterval = 60, hungryAfter: TimeInterval = 30 * 60, now: Date = Date()) {
+    init(sleepyAfter: TimeInterval = 60, hungryAfter: TimeInterval = 10 * 60, now: Date = Date()) {
         self.sleepyAfter = sleepyAfter
         self.hungryAfter = hungryAfter
         self.lastEventAt = now
