@@ -290,10 +290,10 @@ function Features() {
           <div className="feat-num">01 — companion</div>
           <h3>She lives in the space between your windows.</h3>
           <p>
-            Click-through window — single clicks pass straight to the app
-            behind her, double-click feeds. She'll snap to the top, peek
-            from the left or right, or sit on your dock corner. Always
-            there, never in the way.
+            Click-through window — clicks pass to the app behind her, but a
+            single click still earns a soft little meow, and a double-click
+            feeds. She'll snap to the top, peek from the left or right, or sit
+            on your dock corner. Always there, never in the way.
           </p>
           <span className="feat-stat">◉ zero CPU when idle · click-through</span>
           <div className="feat-illustration">
@@ -304,7 +304,7 @@ function Features() {
         <div className="feature">
           <div className="feat-num">02 — moods</div>
           <h3>14 moods that earn themselves.</h3>
-          <p>Idle 5 min → sleepy. 15 → dozing. 30 → curled up sleeping. 24 h no feed → quietly hungry. Sleep progression is a passive decay — never a popup.</p>
+          <p>Idle 1 min → sleepy. 2.5 → dozing. 5 → curled up sleeping. 10 min no feed → quietly hungry. She actually drifts through her moods while you work — a passive decay, never a popup.</p>
           <div className="feat-illustration">
             <PosterCat stateKey="sleepy" alwaysAnimate alt="Sleepy cat" />
           </div>
@@ -312,8 +312,8 @@ function Features() {
 
         <div className="feature">
           <div className="feat-num">03 — feed</div>
-          <h3>Double-click. She eats a Claude-cookie. A tip bubbles up.</h3>
-          <p>Runs <code>claude -p</code> with one of six prompt themes (☕ tip / 💡 prompt / 📰 news / 🤓 TIL / 😆 joke / 🥟 doggerel). Click the bubble to copy the text.</p>
+          <h3>Double-click. She eats a Claude-cookie, thinks, then a tip bubbles up.</h3>
+          <p>The moment you feed her she shows a "let me think…" bubble (the <code>claude -p</code> call takes a few seconds), then swaps in the result — one of six prompt themes (☕ tip / 💡 prompt / 📰 news / 🤓 TIL / 😆 joke / 🥟 doggerel). Click the bubble to copy the text.</p>
           <div className="feat-illustration">
             <PosterCat stateKey="eating" alwaysAnimate alt="Eating cat" />
           </div>

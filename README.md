@@ -40,16 +40,17 @@ It's a screensaver that pays rent.
                                            click bubble copies tip + dismisses  ◄──┘
 ```
 
-1. Move mouse close to the cat — a wobbly little cookie follows your cursor.
-2. **Double-click** the cat to trigger a feed.
-3. Cat plays a chomp animation; lightning + fish particles fly up; halo glows.
+1. Move mouse close to the cat — a wobbly little cookie sticks to your cursor.
+2. A **single click** earns a soft kitten meow (one of three, picked at random).
+3. **Double-click** the cat to trigger a feed; it plays a chomp animation and
+   immediately shows a "let me think…" bubble while it works.
 4. `mypet` shells out to your local `claude` CLI — same login, same quota.
-5. The reply appears in a tiny speech bubble (with theme badge + token count).
+5. The reply replaces the thinking bubble (with theme badge + token count).
 6. Click the bubble to copy the tip; it auto-dismisses after a few seconds.
 
 Cooldown: one feed per minute (the cat tells you when it's still digesting).
-No interaction for 24h → the cat gets hungry (a sad face + a tear). All
-visual — still zero background work.
+No interaction for 10 min → the cat gets quietly hungry. All visual — still
+zero background work.
 
 ## States
 
@@ -73,14 +74,14 @@ the entire performance.
 ### Sleep progression (passive — silent, never grabs attention)
 | State | When | Looks like |
 |---|---|---|
-| `sleepy` | 5min idle | heavy eyelids, slow blink, one droop-and-recover |
-| `dozing` | 15min idle | sitting upright, head dropped to chest, eyes closed |
-| `sleeping` | 30min idle | curled into a fluffy ball on its side, deep breath |
+| `sleepy` | 1min idle | heavy eyelids, slow blink, one droop-and-recover |
+| `dozing` | 2.5min idle | sitting upright, head dropped to chest, eyes closed |
+| `sleeping` | 5min idle | curled into a fluffy ball on its side, deep breath |
 
 ### Mood / engagement
 | State | When | Looks like |
 |---|---|---|
-| `hungry` | 24h no feed | quiet sad sit, glistening eyes, no demand |
+| `hungry` | 10min no feed | quiet sad sit, glistening eyes, no demand |
 | `petting` | hover ≥1s on cat | head leans into invisible hand, eyes squint happy |
 
 ### Spatial (drag the window to a screen edge)
@@ -121,7 +122,21 @@ keeps the last 10 tips under **Recent tips** — click any to copy.
 
 ## Install
 
-### Option A — Homebrew (one-liner, recommended)
+mypet is built for Claude Code users (it feeds on your CC tokens), so the
+natural way in is to let Claude Code install it.
+
+### Option A — paste a prompt into Claude Code (recommended)
+
+> Install mypet — a cute 3D desktop kitten that lives in my screen corner and
+> feeds on Claude Code tokens. Run `brew install --cask anzy-renlab-ai/tap/mypet`,
+> then launch the mypet app.
+
+Claude Code runs the install and opens the app for you.
+
+> **No Claude Code yet?** mypet needs it — the feed shells out to your local
+> `claude` CLI. Get it first at [claude.com/code](https://docs.anthropic.com/claude-code).
+
+### Option B — Homebrew yourself
 
 ```bash
 brew install --cask anzy-renlab-ai/tap/mypet
@@ -129,7 +144,7 @@ brew install --cask anzy-renlab-ai/tap/mypet
 
 Updates later with `brew upgrade --cask mypet`.
 
-### Option B — pre-built `.app` (manual)
+### Option C — pre-built `.app` (manual)
 
 1. Grab the latest `mypet-x.y.z-macos.zip` from
    [**Releases**](https://github.com/anzy-renlab-ai/mypet/releases/latest).
