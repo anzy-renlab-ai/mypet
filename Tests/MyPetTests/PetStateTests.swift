@@ -113,7 +113,9 @@ final class PetStateTests: XCTestCase {
         m.feedSucceeded()
         m.excitedDidFinish()
         m.purringDidFinish()
-        m.evaluateIdleTransitions(now: Date().addingTimeInterval(3 * 3600))
+        // 90s: past sleepyAfter (60s) but before dozeAfter (150s) and
+        // hungryAfter (30min) — isolates the sleepy state.
+        m.evaluateIdleTransitions(now: Date().addingTimeInterval(90))
         XCTAssertEqual(m.state, .sleepy)
         m.wake()
         XCTAssertEqual(m.state, .idle)

@@ -56,14 +56,17 @@ enum PetState: String, Equatable {
 /// Hover-petting only from restful states. Any user interaction wakes.
 struct PetStateMachine {
 
-    /// Sleep progression timings (seconds since last event).
-    /// Defaults reflect the redesigned cadence (5min / 15min / 30min).
-    var sleepyAfter: TimeInterval = 5 * 60
-    var dozeAfter: TimeInterval = 15 * 60
-    var sleepAfter: TimeInterval = 30 * 60
+    /// Sleep progression timings (seconds since last event). Shortened so the
+    /// resting states actually surface during normal use (the old 5/15/30-min
+    /// cadence meant you basically never saw sleepy/dozing/sleeping). These are
+    /// calm poses, so a quicker drift stays within the non-intrusive principle.
+    var sleepyAfter: TimeInterval = 60          // 1 min
+    var dozeAfter: TimeInterval = 150           // 2.5 min
+    var sleepAfter: TimeInterval = 300          // 5 min
 
-    /// Hungry after this many seconds since last successful feed.
-    var hungryAfter: TimeInterval = 24 * 3600
+    /// Hungry after this many seconds since last successful feed. Was 24h
+    /// (never reachable in a session); 30 min so it shows without nagging.
+    var hungryAfter: TimeInterval = 30 * 60
 
     /// Current base state.
     private(set) var state: PetState = .idle
@@ -78,7 +81,7 @@ struct PetStateMachine {
     private(set) var lastEventAt: Date
     private(set) var lastFeedAt: Date = .distantPast
 
-    init(sleepyAfter: TimeInterval = 5 * 60, hungryAfter: TimeInterval = 24 * 3600, now: Date = Date()) {
+    init(sleepyAfter: TimeInterval = 60, hungryAfter: TimeInterval = 30 * 60, now: Date = Date()) {
         self.sleepyAfter = sleepyAfter
         self.hungryAfter = hungryAfter
         self.lastEventAt = now
