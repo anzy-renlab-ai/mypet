@@ -24,9 +24,18 @@ final class FeedCoordinator: ObservableObject {
 
     // MARK: - Published state for SwiftUI
 
-    @Published private(set) var state: PetState = .idle
-    @Published private(set) var excited: Bool = false
-    @Published private(set) var tip: String?
+    @Published private(set) var state: PetState = .idle {
+        didSet { if state != oldValue { Log.shared.info(.state, "\(oldValue.rawValue) → \(state.rawValue)") } }
+    }
+    @Published private(set) var excited: Bool = false {
+        didSet { if excited != oldValue { Log.shared.debug(.feed, "excited overlay = \(excited)") } }
+    }
+    @Published private(set) var tip: String? {
+        didSet {
+            if tip == nil { Log.shared.debug(.feed, "tip cleared") }
+            else { Log.shared.debug(.feed, "tip shown: \"\(tip!.prefix(40))\"") }
+        }
+    }
     @Published private(set) var lastError: ClaudeSubprocessError?
     @Published private(set) var isFirstFeed: Bool = true
     @Published private(set) var feedCount: Int = 0
@@ -172,14 +181,19 @@ final class FeedCoordinator: ObservableObject {
 
     /// User clicked Feed. Orchestrates the full cycle.
     func feed() async {
+        Log.shared.info(.feed, "feed() requested (state=\(machine.state.rawValue))")
         // Already feeding? ignore.
-        guard machine.state != .eating else { return }
+        guard machine.state != .eating else {
+            Log.shared.debug(.feed, "feed() ignored — already eating")
+            return
+        }
 
         // Cooldown gate — give the user feedback instead of silently doing nothing.
         if let last = try? await log.lastFeedTimestamp() {
             let sinceLast = Date().timeIntervalSince(last)
             if sinceLast < cooldownSeconds {
                 let remaining = Int((cooldownSeconds - sinceLast).rounded(.up))
+                Log.shared.info(.feed, "feed rejected — cooldown \(remaining)s left")
                 Self.log.info("feed rejected: cooldown active (\(remaining)s left)")
                 tip = "还在消化呢，再等 \(remaining) 秒 🐾"
                 try? await Task.sleep(nanoseconds: UInt64(cooldownTipSeconds * 1_000_000_000))
@@ -210,6 +224,7 @@ final class FeedCoordinator: ObservableObject {
 
     /// User dismissed the tip bubble. Move from purring → idle.
     func dismissTip() {
+        Log.shared.debug(.feed, "dismissTip (state=\(machine.state.rawValue))")
         guard machine.state == .purring else { return }
         machine.purringDidFinish()
         state = machine.state
@@ -219,12 +234,14 @@ final class FeedCoordinator: ObservableObject {
     /// Triggered on app activation / mouse approach / window key.
     /// Reconciles idle transitions (sleepy after 2h, hungry after 24h).
     func evaluateIdle() {
+        Log.shared.debug(.state, "evaluateIdle (state=\(machine.state.rawValue))")
         machine.evaluateIdleTransitions()
         state = machine.state
     }
 
     /// Wake the cat (sleepy → idle, hungry → idle).
     func wake() {
+        Log.shared.debug(.state, "wake (state=\(machine.state.rawValue))")
         machine.wake()
         state = machine.state
     }
@@ -234,6 +251,7 @@ final class FeedCoordinator: ObservableObject {
     /// Window moved near a screen edge. Sets clingTop / peekLeft / peekRight
     /// when appropriate (no-op during the active feed cycle).
     func setEdgeState(_ edge: PetState?) {
+        Log.shared.debug(.state, "setEdgeState(\(edge?.rawValue ?? "nil")) from \(machine.state.rawValue)")
         if let edge {
             machine.enterEdge(edge)
         } else {
@@ -247,6 +265,7 @@ final class FeedCoordinator: ObservableObject {
     /// Hover lingered ≥1s on the cat → enter petting (no-op from feed cycle
     /// or edge states). Pass `false` when cursor leaves to restore idle.
     func setPetting(_ active: Bool) {
+        Log.shared.debug(.state, "setPetting(\(active)) from \(machine.state.rawValue)")
         if active {
             machine.enterPetting()
         } else {
@@ -272,6 +291,7 @@ final class FeedCoordinator: ObservableObject {
 
     private func handleSuccess(_ success: FeedSuccess) async {
         let receivedTip = success.tip
+        Log.shared.info(.feed, "feed succeeded — \(success.tokens) tokens, tip=\"\(receivedTip.prefix(40))\"")
         machine.feedSucceeded()
         state = .excited
         excited = true
@@ -309,6 +329,7 @@ final class FeedCoordinator: ObservableObject {
     }
 
     private func handleFailure(error: ClaudeSubprocessError) async {
+        Log.shared.error(.feed, "feed failed — \(String(describing: error))")
         Self.log.error("feed failed: \(String(describing: error))")
         machine.feedFailed()
         state = machine.state

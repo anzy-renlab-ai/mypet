@@ -275,8 +275,10 @@ final class ClaudeSubprocess {
     /// and never reads OAuth/keychain, which would break auth for most users.
     static func feedOnce(prompt: String) async throws -> FeedSuccess {
         guard let binary = await discoverBinary() else {
+            Log.shared.error(.subprocess, "claude binary not found on PATH")
             throw ClaudeSubprocessError.binaryNotFound
         }
+        Log.shared.info(.subprocess, "invoking claude (\(binary))")
         let raw = try await runRaw(
             binary: binary,
             args: ["-p", prompt, "--output-format", "json",

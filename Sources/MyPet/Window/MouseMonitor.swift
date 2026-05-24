@@ -71,9 +71,11 @@ final class MouseMonitor: ObservableObject {
         if win.frame.contains(screen) {
             // AppKit windows already use a y-up coordinate system, so
             // a simple offset converts screen → content coords.
+            if cursorPos == nil { Log.shared.debug(.mouse, "cursor entered window") }
             cursorPos = CGPoint(x: screen.x - win.frame.minX,
                                 y: screen.y - win.frame.minY)
         } else if cursorPos != nil {
+            Log.shared.debug(.mouse, "cursor left window")
             cursorPos = nil
         }
     }
@@ -84,8 +86,10 @@ final class MouseMonitor: ObservableObject {
         let local = CGPoint(x: screen.x - win.frame.minX,
                             y: screen.y - win.frame.minY)
         if event.clickCount == 2 {
+            Log.shared.info(.mouse, "double-click at (\(Int(local.x)),\(Int(local.y))) → feed")
             onDoubleClick()
         } else if event.clickCount == 1 {
+            Log.shared.debug(.mouse, "single-click at (\(Int(local.x)),\(Int(local.y)))")
             onSingleClick(local)
         }
     }

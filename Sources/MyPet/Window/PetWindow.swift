@@ -225,6 +225,7 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     /// (drawn at the bottom of the content) doesn't jump.
     func setExpanded(_ expanded: Bool, animate: Bool = true) {
         let newSize = expanded ? PetWindow.expandedSize : PetWindow.compactSize
+        Log.shared.debug(.window, "setExpanded(\(expanded)) \(Int(frame.width))x\(Int(frame.height)) → \(Int(newSize.width))x\(Int(newSize.height))")
         if frame.size == newSize { return }
         let oldFrame = frame
         // keep bottom-right fixed

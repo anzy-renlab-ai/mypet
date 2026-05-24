@@ -10,6 +10,12 @@ private let log = Logger(subsystem: "ai.mypet", category: "Menubar")
 final class MenubarController: NSObject {
 
     private var statusItem: NSStatusItem?
+    // Identity refs so menuWillOpen can recognise these submenus without
+    // matching on their (localized) titles — comparing `menu.title == "Recent
+    // tips"` silently failed under the Chinese locale, leaving the submenu
+    // stuck on "(载入中…)".
+    private weak var recentSubmenu: NSMenu?
+    private weak var levelSubmenu: NSMenu?
     private let coordinator: FeedCoordinator
     private let feedLog: FeedLog
     private let onShowOnboarding: () -> Void
@@ -92,6 +98,7 @@ final class MenubarController: NSObject {
         recentSubmenu.addItem(placeholder)
         recentSubmenu.delegate = self
         recentParent.submenu = recentSubmenu
+        self.recentSubmenu = recentSubmenu
         menu.addItem(recentParent)
 
         let bringItem = NSMenuItem(
@@ -142,6 +149,34 @@ final class MenubarController: NSObject {
         aboutItem.target = self
         menu.addItem(aboutItem)
 
+        // Diagnostics — for bug reports + live log-verbosity control.
+        let diagParent = NSMenuItem(title: L10n.t("Diagnostics", "诊断"), action: nil, keyEquivalent: "")
+        let diagMenu = NSMenu()
+
+        let revealLogs = NSMenuItem(
+            title: L10n.t("Show logs in Finder", "在 Finder 中显示日志"),
+            action: #selector(revealLogs), keyEquivalent: ""
+        )
+        revealLogs.target = self
+        diagMenu.addItem(revealLogs)
+
+        let levelParent = NSMenuItem(title: L10n.t("Log level", "日志等级"), action: nil, keyEquivalent: "")
+        let levelMenu = NSMenu()
+        for lvl in LogLevel.allCases {
+            let it = NSMenuItem(title: lvl.label, action: #selector(setLogLevel(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = lvl.rawValue
+            it.state = (Log.shared.level == lvl) ? .on : .off
+            levelMenu.addItem(it)
+        }
+        levelMenu.delegate = self
+        levelParent.submenu = levelMenu
+        self.levelSubmenu = levelMenu
+        diagMenu.addItem(levelParent)
+
+        diagParent.submenu = diagMenu
+        menu.addItem(diagParent)
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
@@ -161,6 +196,16 @@ final class MenubarController: NSObject {
         Task { @MainActor in
             await coordinator.feed()
         }
+    }
+
+    @objc private func revealLogs() {
+        NSWorkspace.shared.activateFileViewerSelecting([Log.shared.directoryURL])
+    }
+
+    @objc private func setLogLevel(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? Int, let lvl = LogLevel(rawValue: raw) else { return }
+        Log.shared.level = lvl
+        Log.shared.info(.app, "log level set to \(lvl.label) via menubar")
     }
 
     @objc private func copyTipFromMenu(_ sender: NSMenuItem) {
@@ -231,15 +276,26 @@ final class MenubarController: NSObject {
 
 extension MenubarController: NSMenuDelegate {
     nonisolated func menuWillOpen(_ menu: NSMenu) {
-        // Triggered each open — keep label fresh + refill Recent tips submenu.
-        let menuTitle = menu.title
+        // Triggered each open. Match submenus by identity (not localized title).
         Task { @MainActor in
-            if menuTitle == "Recent tips" {
+            if menu === self.recentSubmenu {
                 self.refreshRecentTipsSubmenu(menu)
                 return
             }
-            if let item = menu.items.first(where: { $0.action == #selector(toggleLogin) }) {
-                item.title = LoginItem.isEnabled() ? "✓ 开机自启" : "开机自启"
+            if menu === self.levelSubmenu {
+                // Refresh checkmarks so the active level shows even when it was
+                // changed since the menu was last built.
+                for item in menu.items {
+                    if let raw = item.representedObject as? Int {
+                        item.state = (raw == Log.shared.level.rawValue) ? .on : .off
+                    }
+                }
+                return
+            }
+            if let item = menu.items.first(where: { $0.action == #selector(self.toggleLogin) }) {
+                item.title = LoginItem.isEnabled()
+                    ? L10n.t("✓ Launch at login", "✓ 开机自启")
+                    : L10n.t("Launch at login", "开机自启")
             }
         }
     }

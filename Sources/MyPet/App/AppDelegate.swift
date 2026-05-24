@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         logger.info("mypet launching")
+        Log.shared.info(.app, "launching (log level=\(Log.shared.level.label), logs at \(Log.shared.directoryURL.path))")
         NSApp.setActivationPolicy(.accessory)
 
         feedLog = FeedLog(url: FeedLog.defaultURL())
@@ -40,9 +41,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onBringHere: { [weak self] in
                 self?.petWindow?.placeBottomRight()
+                // Home position = no edge → make sure the pose returns to idle
+                // (otherwise a cat snapped to peekLeft stays peeking here).
+                self?.coordinator.setEdgeState(nil)
             },
             onSnapTo: { [weak self] edge in
                 self?.petWindow?.snap(to: edge)
+                // The window move alone doesn't change the pose (windowDidMove
+                // edge-detection is intentionally disabled). Drive the matching
+                // spatial state explicitly so "cling to top" actually hangs.
+                let state: PetState?
+                switch edge {
+                case .top:    state = .clingTop
+                case .left:   state = .peekLeft
+                case .right:  state = .peekRight
+                case .bottom: state = nil
+                }
+                self?.coordinator.setEdgeState(state)
             }
         )
 
