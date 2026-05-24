@@ -264,13 +264,23 @@ final class ClaudeSubprocess {
 
     /// Calls `claude -p <prompt> --output-format json` and parses the result
     /// envelope so we can report token usage alongside the tip text.
+    ///
+    /// Lean flags keep the cost down: a feed only needs one line of text, but
+    /// by default `claude` loads every configured MCP server's tool schemas +
+    /// all built-in tool definitions into the prompt — measured at ~20k input
+    /// tokens per feed on a machine with several MCP servers. `--strict-mcp-config`
+    /// (with no `--mcp-config`) loads zero MCP servers and `--tools ""` disables
+    /// the built-in tools, cutting input to ~6k (~69% less) while still returning
+    /// a tip. We deliberately do NOT use `--bare`: it forces ANTHROPIC_API_KEY
+    /// and never reads OAuth/keychain, which would break auth for most users.
     static func feedOnce(prompt: String) async throws -> FeedSuccess {
         guard let binary = await discoverBinary() else {
             throw ClaudeSubprocessError.binaryNotFound
         }
         let raw = try await runRaw(
             binary: binary,
-            args: ["-p", prompt, "--output-format", "json"],
+            args: ["-p", prompt, "--output-format", "json",
+                   "--strict-mcp-config", "--tools", ""],
             timeout: 90
         )
         let parsed = try parseFeedJSON(raw)
