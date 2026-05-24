@@ -39,20 +39,33 @@ struct TurtleView: View {
     }
 
     var body: some View {
-        // 60fps only when something procedural actually moves. The cat is
-        // APNG-driven (NSImageView animates independently of SwiftUI) and
-        // `microMotion()` is a no-op, so the ONLY per-frame work is the
-        // cursor-following cookie. When no cookie shows, render one static
-        // frame — restores invariant #1 (zero idle CPU / motionless when
-        // ignored). The cookie's transition still animates because the
-        // `needsAnimation` flip drives a body re-render.
-        Group {
-            if needsAnimation {
+        ZStack {
+            // The cat is ALWAYS mounted with a stable identity. It must not
+            // live inside a `needsAnimation` conditional: toggling that branch
+            // tore down and rebuilt the AnimatedCatView (an NSImageView), so
+            // the cat flickered / vanished every time the cursor entered or
+            // left the cookie zone. The sprite is APNG-driven (NSImageView
+            // owns its own clock) and microMotion() is a no-op, so the cat
+            // needs no SwiftUI per-frame clock at all.
+            catBody
+
+            // The cursor-following cookie is the ONLY thing that needs the
+            // 60fps clock. Mount the TimelineView only while the cookie shows,
+            // keeping idle at zero SwiftUI redraw (invariant #1). The cookie
+            // hides during the active feed cycle (eating/excited/purring) via
+            // cookieAllowed — it was just "eaten".
+            if needsAnimation, let pos = cursorPos {
                 TimelineView(.animation) { ctx in
-                    content(at: ctx.date)
+                    FollowingToken(t: ctx.date.timeIntervalSinceReferenceDate)
+                        .position(x: pos.x, y: pos.y)
                 }
-            } else {
-                content(at: .now)
+                // Appears with a tiny fade; hides INSTANTLY (removal: identity)
+                // so the cookie vanishes the moment a feed starts.
+                .transition(.asymmetric(
+                    insertion: .opacity.animation(.easeOut(duration: 0.18)),
+                    removal: .identity
+                ))
+                .allowsHitTesting(false)
             }
         }
         .contentShape(Rectangle())
@@ -63,43 +76,18 @@ struct TurtleView: View {
         .animation(.easeInOut(duration: 0.2), value: state)
     }
 
-    @ViewBuilder
-    private func content(at date: Date) -> some View {
-        let t = date.timeIntervalSinceReferenceDate
-
-        ZStack {
-            // Particle overlays (lightning / sparkles / fish bones) removed
-            // per user feedback — 吃东西时不要那些乱七八糟. The APNG itself
-            // carries the eating motion; layering particles on top reads as
-            // noisy.
-
-            VStack(spacing: 2) {
-                Spacer(minLength: 0)
-                CuteCatFace(state: state, t: t)
-                    .frame(width: 96, height: 96)
-                Spacer().frame(height: 12)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Cursor-following token cookie. Only shows during "resting"
-            // states where feeding is a meaningful next action. Hidden during
-            // the active feed cycle (eating → excited → purring) because the
-            // cookie was just "eaten" — having it still floating around would
-            // contradict the chomp animation.
-            if let pos = cursorPos, cursorInZone, cookieAllowed {
-                FollowingToken(t: t)
-                    .position(x: pos.x, y: pos.y)
-                    // Asymmetric transition: appears with a tiny fade, hides
-                    // INSTANTLY. When the user double-clicks, they expect the
-                    // cookie to vanish the moment feeding starts — not lag
-                    // through a fade-out while the cat is already chomping.
-                    .transition(.asymmetric(
-                        insertion: .opacity.animation(.easeOut(duration: 0.18)),
-                        removal: .identity
-                    ))
-                    .allowsHitTesting(false)
-            }
+    private var catBody: some View {
+        // Particle overlays (lightning / sparkles) intentionally absent — the
+        // APNG already carries every visible motion (user feedback: 吃东西时
+        // 不要那些乱七八糟). t is unused (microMotion is a no-op), so the cat
+        // doesn't depend on any clock.
+        VStack(spacing: 2) {
+            Spacer(minLength: 0)
+            CuteCatFace(state: state, t: 0)
+                .frame(width: 96, height: 96)
+            Spacer().frame(height: 12)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Whether the cursor-following cookie may render given the current state.
