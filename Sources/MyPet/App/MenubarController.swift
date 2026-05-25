@@ -16,12 +16,15 @@ final class MenubarController: NSObject {
     // stuck on "(载入中…)".
     private weak var recentSubmenu: NSMenu?
     private weak var levelSubmenu: NSMenu?
+    private weak var screensSubmenu: NSMenu?
     private let coordinator: FeedCoordinator
     private let feedLog: FeedLog
     private let onShowOnboarding: () -> Void
     private let onQuit: () -> Void
     private let onBringHere: () -> Void
     private let onSnapTo: (PetWindow.Edge) -> Void
+    private let onMoveToScreen: (NSScreen) -> Void
+    private let currentDisplayID: () -> CGDirectDisplayID?
 
     init(
         coordinator: FeedCoordinator,
@@ -29,7 +32,9 @@ final class MenubarController: NSObject {
         onShowOnboarding: @escaping () -> Void,
         onQuit: @escaping () -> Void,
         onBringHere: @escaping () -> Void = {},
-        onSnapTo: @escaping (PetWindow.Edge) -> Void = { _ in }
+        onSnapTo: @escaping (PetWindow.Edge) -> Void = { _ in },
+        onMoveToScreen: @escaping (NSScreen) -> Void = { _ in },
+        currentDisplayID: @escaping () -> CGDirectDisplayID? = { nil }
     ) {
         self.coordinator = coordinator
         self.feedLog = feedLog
@@ -37,6 +42,8 @@ final class MenubarController: NSObject {
         self.onQuit = onQuit
         self.onBringHere = onBringHere
         self.onSnapTo = onSnapTo
+        self.onMoveToScreen = onMoveToScreen
+        self.currentDisplayID = currentDisplayID
         super.init()
         install()
     }
@@ -128,6 +135,19 @@ final class MenubarController: NSObject {
         }
         snapParent.submenu = snapMenu
         menu.addItem(snapParent)
+
+        // Move-to-screen submenu — populated lazily on open (the list of
+        // monitors changes at runtime when displays are plugged/unplugged).
+        let screensTitle = L10n.t("Move to screen", "移到这块屏")
+        let screensParent = NSMenuItem(title: screensTitle, action: nil, keyEquivalent: "")
+        let screensMenu = NSMenu(title: screensTitle)
+        let scrPlaceholder = NSMenuItem(title: L10n.t("(loading…)", "(载入中…)"), action: nil, keyEquivalent: "")
+        scrPlaceholder.isEnabled = false
+        screensMenu.addItem(scrPlaceholder)
+        screensMenu.delegate = self
+        screensParent.submenu = screensMenu
+        self.screensSubmenu = screensMenu
+        menu.addItem(screensParent)
 
         menu.addItem(.separator())
 
@@ -269,6 +289,41 @@ final class MenubarController: NSObject {
         onSnapTo(edge)
     }
 
+    @objc private func moveToScreen(_ sender: NSMenuItem) {
+        guard let screen = sender.representedObject as? NSScreen else { return }
+        onMoveToScreen(screen)
+    }
+
+    /// Rebuild the move-to-screen submenu from the live monitor list. The
+    /// current screen gets a checkmark; the primary display is labelled. With a
+    /// single display we show a disabled hint instead of a useless one-entry
+    /// list.
+    private func refreshScreensSubmenu(_ submenu: NSMenu) {
+        submenu.removeAllItems()
+        let screens = NSScreen.screens
+        let mainID = NSScreen.main?.displayID
+        let activeID = currentDisplayID()
+        guard screens.count > 1 else {
+            let only = NSMenuItem(title: L10n.t("(only one display)", "(只有一块屏)"), action: nil, keyEquivalent: "")
+            only.isEnabled = false
+            submenu.addItem(only)
+            return
+        }
+        for (i, screen) in screens.enumerated() {
+            let id = screen.displayID
+            let r = screen.frame
+            var label = screen.localizedName
+            if label.isEmpty { label = L10n.t("Display \(i + 1)", "显示器 \(i + 1)") }
+            if id == mainID { label += L10n.t(" (main)", "(主屏)") }
+            label += "  \(Int(r.width))×\(Int(r.height))"
+            let item = NSMenuItem(title: label, action: #selector(moveToScreen(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = screen
+            item.state = (id != nil && id == activeID) ? .on : .off
+            submenu.addItem(item)
+        }
+    }
+
     @objc private func quit() {
         onQuit()
     }
@@ -280,6 +335,10 @@ extension MenubarController: NSMenuDelegate {
         Task { @MainActor in
             if menu === self.recentSubmenu {
                 self.refreshRecentTipsSubmenu(menu)
+                return
+            }
+            if menu === self.screensSubmenu {
+                self.refreshScreensSubmenu(menu)
                 return
             }
             if menu === self.levelSubmenu {

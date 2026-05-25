@@ -58,6 +58,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .bottom: state = nil
                 }
                 self?.coordinator.setEdgeState(state)
+            },
+            onMoveToScreen: { [weak self] screen in
+                // Park the cat on the chosen monitor (persists across launches)
+                // and reset to the neutral home pose on that screen.
+                self?.petWindow?.setPreferredScreen(screen)
+                self?.coordinator.setEdgeState(nil)
+            },
+            currentDisplayID: { [weak self] in
+                self?.petWindow?.targetScreen?.displayID
             }
         )
 

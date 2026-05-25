@@ -158,12 +158,39 @@ final class PetWindow: NSWindow, NSWindowDelegate {
         setFrame(f, display: true, animate: true)
     }
 
+    // MARK: - Display targeting (multi-monitor)
+
+    /// UserDefaults key for the display the user parked the cat on. Stored as
+    /// the CoreGraphics display ID so it survives relaunches and reconnects to
+    /// the same physical monitor even if the screen ordering changes.
+    private static let preferredDisplayKey = "mypet.preferredDisplayID"
+
+    /// The screen the cat should live on. Honors the user's menubar choice;
+    /// falls back to the primary display when that monitor is gone (e.g. the
+    /// external display was unplugged) so the cat never strands off-screen.
+    var targetScreen: NSScreen? {
+        if let id = UserDefaults.standard.object(forKey: Self.preferredDisplayKey) as? UInt32,
+           let match = NSScreen.screens.first(where: { $0.displayID == id }) {
+            return match
+        }
+        return NSScreen.main ?? self.screen
+    }
+
+    /// Park the cat on `screen` and remember the choice across launches.
+    func setPreferredScreen(_ screen: NSScreen) {
+        if let id = screen.displayID {
+            UserDefaults.standard.set(id, forKey: Self.preferredDisplayKey)
+            Log.shared.info(.window, "preferred display set to \(screen.localizedName) (id \(id))")
+        }
+        placeBottomRight()
+    }
+
     enum Edge { case top, right, bottom, left }
 
     /// Explicitly park the cat against one screen edge (menubar action).
-    /// Snaps to an edge of the primary display (`NSScreen.main`), matching
-    /// `placeBottomRight()`'s documented user preference that the cat lives on
-    /// the primary screen regardless of cursor location. Animated.
+    /// Snaps to an edge of `targetScreen` (primary display by default, or the
+    /// monitor the user moved the cat to), matching `placeBottomRight()`.
+    /// Animated.
     ///
     /// Behavior per edge:
     ///   .top    — window's top touches screen top; cat hangs down
@@ -173,7 +200,7 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     ///   .right  — mirror of .left.
     ///   .bottom — back to the home bottom-right corner with margin.
     func snap(to edge: Edge) {
-        guard let s = NSScreen.main ?? self.screen else { return }
+        guard let s = targetScreen else { return }
         let visible = s.visibleFrame
         var f = frame
 
@@ -201,15 +228,15 @@ final class PetWindow: NSWindow, NSWindowDelegate {
     }
 
     /// Re-anchor the bottom-right corner after a resize.
-    /// Always uses the main screen (NSScreen.main) — user preference: cat
-    /// stays on the primary display, never the secondary, regardless of
-    /// where the cursor is. The vertical anchor sits the window flush with
+    /// Uses `targetScreen` — the primary display by default, or whichever
+    /// monitor the user parked the cat on via the menubar "Move to screen"
+    /// submenu. The vertical anchor sits the window flush with
     /// the dock area so the cat appears to *stand on* the screen edge
     /// rather than float above it. Forces the window front so it stays
     /// visible even though `ignoresMouseEvents = true` prevents it becoming
     /// key.
     func placeBottomRight() {
-        guard let s = NSScreen.main ?? self.screen else { return }
+        guard let s = targetScreen else { return }
         let visible = s.visibleFrame
         let rightMargin: CGFloat = 16
         let bottomMargin: CGFloat = 32   // raises the cat enough that the paws clear the dock area
@@ -236,5 +263,13 @@ final class PetWindow: NSWindow, NSWindowDelegate {
         )
         let newFrame = NSRect(origin: newOrigin, size: newSize)
         setFrame(newFrame, display: true, animate: animate)
+    }
+}
+
+extension NSScreen {
+    /// The CoreGraphics display ID — stable per physical monitor, unlike the
+    /// index into `NSScreen.screens` which reshuffles when displays connect.
+    var displayID: CGDirectDisplayID? {
+        deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
     }
 }
