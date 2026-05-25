@@ -232,4 +232,60 @@ final class PetWindowTests: XCTestCase {
 
         XCTAssertEqual(recorder().count, 1, "Repeated calls in the same zone must debounce to a single emission")
     }
+
+    // MARK: - Multi-monitor target screen
+
+    /// Must mirror PetWindow.preferredDisplayKey (private). Kept in sync by
+    /// test_preferredDisplayKey_matches below would be ideal, but the key is
+    /// private; this literal is the contract.
+    private static let preferredDisplayKey = "mypet.preferredDisplayID"
+
+    override func tearDown() {
+        // Never leak a test preference into the real app's defaults.
+        UserDefaults.standard.removeObject(forKey: Self.preferredDisplayKey)
+        super.tearDown()
+    }
+
+    func test_displayID_isNonNilForMainScreen() {
+        guard let main = NSScreen.main else { return XCTFail("No main screen") }
+        XCTAssertNotNil(main.displayID, "Every attached screen reports a CGDirectDisplayID")
+    }
+
+    func test_targetScreen_defaultsToMain_whenNoPreference() {
+        UserDefaults.standard.removeObject(forKey: Self.preferredDisplayKey)
+        let w = PetWindow()
+        XCTAssertEqual(w.targetScreen?.displayID, NSScreen.main?.displayID,
+            "With no stored preference the cat lives on the primary display")
+    }
+
+    func test_setPreferredScreen_persistsChoice() {
+        guard let main = NSScreen.main else { return XCTFail("No main screen") }
+        let w = PetWindow()
+        w.setPreferredScreen(main)
+        XCTAssertEqual(UserDefaults.standard.object(forKey: Self.preferredDisplayKey) as? UInt32,
+                       main.displayID,
+            "setPreferredScreen must persist the chosen display's ID")
+        XCTAssertEqual(w.targetScreen?.displayID, main.displayID)
+    }
+
+    func test_targetScreen_fallsBackToMain_whenStoredDisplayUnplugged() {
+        // Simulate the external monitor being gone: store a display ID that
+        // matches no attached screen. The cat must NOT strand off-screen — it
+        // falls back to the primary display.
+        UserDefaults.standard.set(UInt32(0xDEAD_BEEF), forKey: Self.preferredDisplayKey)
+        let w = PetWindow()
+        XCTAssertNotNil(w.targetScreen, "Unknown stored display must not yield a nil target")
+        XCTAssertEqual(w.targetScreen?.displayID, NSScreen.main?.displayID,
+            "A stored display that is no longer attached falls back to the primary screen")
+    }
+
+    func test_placeBottomRight_usesTargetScreen_afterMove() {
+        guard let main = NSScreen.main else { return XCTFail("No main screen") }
+        let w = PetWindow()
+        w.setPreferredScreen(main)   // resolves to main on a single-display CI
+        w.placeBottomRight()
+        let visible = main.visibleFrame
+        XCTAssertEqual(w.frame.origin.x, visible.maxX - PetWindow.compactSize.width - 16, accuracy: 0.5)
+        XCTAssertEqual(w.frame.origin.y, visible.minY + 32, accuracy: 0.5)
+    }
 }
