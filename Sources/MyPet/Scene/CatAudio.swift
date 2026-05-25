@@ -86,7 +86,7 @@ final class CatAudio {
         player?.stop()
         do {
             let p = try AVAudioPlayer(contentsOf: url)
-            p.volume = 0.2   // ambient = soft (20%); was 1.0 and too loud
+            p.volume = 0.1   // ambient = very soft (10%); 0.2 was still a touch loud, 1.0 way too loud
             p.prepareToPlay()
             p.play()
             self.player = p
